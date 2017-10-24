@@ -55,3 +55,24 @@ class ProxyServer():
         hstring = b''.join(headers).decode('iso-8859-1')
         parser = email.parser.Parser(_class=http.client.HTTPMessage)
         return parser.parsestr(hstring)
+
+
+class HTTPRequest():
+    '''
+    Class to store information about a request.
+    '''
+    def __init__(method, hostname, url, headers):
+        self.method = method
+        self.hostname = hostname
+        self.url = url
+
+
+class ProxySession():
+    '''
+    Manages communication between the client and Kalamari and between
+    Karamari and the request destination.
+    '''
+    def __init__(self, reader, writer, request):
+        self.reader = reader
+        self.writer = writer
+        self.request = request
