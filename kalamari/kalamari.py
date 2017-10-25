@@ -1,6 +1,10 @@
 #! /usr/bin/env python3
 import asyncio
 import proxy
+import os
+
+# temporary convenience variables (as opposed to environment)
+import config
 
 
 if __name__ == '__main__':
