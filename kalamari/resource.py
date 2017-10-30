@@ -42,7 +42,11 @@ class Resource_list():
 Blacklist = Resource_list(blacklisturl)
 
 #sanity check
-print(Blacklist.json['domain'])
-print("-------------------")
+#print(Blacklist.json['domain'])
+#print("-------------------")
 s = jsonTOstrings(Blacklist.json)
-print(s)
+print(s[0])
+print("-------------------")
+print(s[1])
+print("-------------------")
+print(s[2])
