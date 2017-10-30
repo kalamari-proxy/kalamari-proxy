@@ -1,6 +1,7 @@
 import json
 import urllib.request
 import sys
+import re
 
 blacklisturl = "https://kalamari-proxy.github.io/lists/blacklist.json"
 whitelisturl = "https://kalamari-proxy.github.io/lists/whitelist.json"
@@ -24,10 +25,13 @@ def jsonTOstrings(jsonOBJ):
     strings = []
     for d in jsonOBJ['domain']:
         domains = domains + d + "|"
+    domains = domains[:-1]
     for p in jsonOBJ['path']:
-        paths = domains + p + "|"
+        paths = paths + p + "|"
+    paths = paths[:-1]
     for m in jsonOBJ['misc']:
-        miscs = domains + m + "|"
+        miscs = miscs + m + "|"
+    miscs = miscs[:-1]
     strings.append(domains)
     strings.append(paths)
     strings.append(miscs)
@@ -36,11 +40,39 @@ def jsonTOstrings(jsonOBJ):
 # Generic list class
 class Resource_list():
     def __init__(self,json):
-        self.json = obtainJSON(json)    # instance variable unique to each instance
-        #build regex here
+        self.json = obtainJSON(json)    # json object unique to each instance
+        #build regex here, will implement the jsonTOstrings function being printed below
+        # current regex is not correct
+        self.strings = jsonTOstrings(self.json)
+        self.regex = re.compile('[.]*'(self.strings[0])'[.]*'(self.strings[1])'[.]*'(slef.strings[2]'[.]*')
 
 Blacklist = Resource_list(blacklisturl)
+Whitelist = Resource_list(whitelisturl)
+Cachelist = Resource_list(cachelisturl)
 
+# Not sure exactly what to return
+class Check_black(urlTocheck):
+    match = Blacklist.regex.match('urlTocheck')
+    if match:
+        return 1
+    else:
+        return -1
+
+
+
+class Check_white(urlTocheck):
+    match = Whitelist.regex.match('urlTocheck')
+    if match:
+        return 1
+    else:
+        return -1
+
+class Check_cache('urlTocheck'):
+    match = Cachelist.regex.match('urlTocheck')
+    if match:
+        return 1
+    else:
+        return -1
 #sanity check
 #print(Blacklist.json['domain'])
 #print("-------------------")
