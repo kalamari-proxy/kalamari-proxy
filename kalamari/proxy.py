@@ -54,7 +54,7 @@ class ProxyServer():
         while True:
             line = await reader.readline()
             if len(line) > cls.MAXLINE:
-                raise ValueError('Line too long while parsing  header')
+                raise ValueError('Line too long while parsing header')
             headers.append(line)
             if len(headers) > cls.MAXHEADERS:
                 raise ValueError('Too many headers found while parsing')
@@ -70,11 +70,11 @@ class HTTPRequest():
     '''
     Class to store information about a request.
     '''
-    def __init__( self, method, hostname, port, url, headers):
+    def __init__(self, method, hostname, port, path, headers):
         self.method = method
         self.host = hostname
         self.port = port
-        self.url = url
+        self.path = path
         self.headers = headers
 
 
@@ -125,8 +125,10 @@ class ProxySessionOutput(asyncio.Protocol):
         Forward the request to the remote server.
         '''
         self.transport = transport
-        # TODO: stop using hardcoded request.
-        self.transport.write(b'GET / HTTP/1.1\nHost: localhost\n\n')
+        self.transport.write('GET {path} HTTP/1.1\nHost: {host}\nConnection: close\n\n'.format(**{
+            'host': self.request.host,
+            'path': self.request.path
+        }).encode('iso-8859-1'))
 
     def data_received(self, data):
         '''
