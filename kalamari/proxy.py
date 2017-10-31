@@ -19,8 +19,8 @@ class ProxyServer():
         '''
         # Read the request method
         method_line = await reader.readline()
-        verb, url, version = parse_method(method_line)
-        hostname, port, path = parse_url(url)
+        verb, url, version = self.parse_method(method_line)
+        hostname, port, path = self.parse_url(url)
 
         # Read headers from the request
         headers = await self.parse_headers(reader)
