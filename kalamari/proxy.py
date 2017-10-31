@@ -19,8 +19,8 @@ class ProxyServer():
         '''
         # Read the request method
         method_line = await reader.readline()
-        verb, url, version = self.parse_method(method_line)
-        hostname, port, path = self.parse_url(url)
+        verb, url, version = ProxyServer.parse_method(method_line)
+        hostname, port, path = ProxyServer.parse_url(url)
 
         # Read headers from the request
         headers = await self.parse_headers(reader)
@@ -37,6 +37,7 @@ class ProxyServer():
         # writer.write(b'HTTP/1.1 404 Not Found\n\n')
         # writer.close()
 
+    @staticmethod
     def parse_method(method):
         '''
         Given an HTTP request method line like:
@@ -73,6 +74,7 @@ class ProxyServer():
 
         return (verb, target, version)
 
+    @staticmethod
     def parse_url(url):
         '''
         Decompose a URL and return a tuple containing:
