@@ -11,9 +11,6 @@ cachelisturl = "https://kalamari-proxy.github.io/lists/cachelist.json"
 def obtainJSON(url):
     req = urllib.request.urlopen(url)
     data = req.read()
-
-#pretty sure encoding will always be utf-8
-#encoding = req.info().get_content_charset('utf-8')
     data = json.loads(data.decode('utf-8'))
     return data
 
@@ -43,36 +40,52 @@ class Resource_list():
         self.json = obtainJSON(json)    # json object unique to each instance
         #build regex here, will implement the jsonTOstrings function being printed below
         # current regex is not correct
-        self.strings = jsonTOstrings(self.json)
-        self.regex = re.compile('[.]*'(self.strings[0])'[.]*'(self.strings[1])'[.]*'(slef.strings[2]'[.]*')
+        # self.strings = jsonTOstrings(self.json)
+        self.regex = re.compile('http')
 
+#will need to initialize these in their own function (refresh)
 Blacklist = Resource_list(blacklisturl)
 Whitelist = Resource_list(whitelisturl)
 Cachelist = Resource_list(cachelisturl)
 
-# Not sure exactly what to return
-class Check_black(urlTocheck):
-    match = Blacklist.regex.match('urlTocheck')
+# Not how to set up these classes
+class Check_black:
+    def __init__(self,request):
+            self.request = request
+
+    match = Blacklist.regex.match(request)
     if match:
-        return 1
+        result = True
     else:
-        return -1
+        result = False
+        def f(self):
+            return result
 
 
 
-class Check_white(urlTocheck):
-    match = Whitelist.regex.match('urlTocheck')
+class Check_white:
+    def __init__(self,request):
+            self.request = request
+            
+    match = Whitelist.regex.match(request)
     if match:
-        return 1
+        result = True
     else:
-        return -1
+        result = False
+        def f(self):
+            return result
 
-class Check_cache('urlTocheck'):
-    match = Cachelist.regex.match('urlTocheck')
+class Check_cache:
+    def __init__(self,request):
+            self.request = request
+    match = Cachelist.regex.match(request)
     if match:
-        return 1
+        result = True
     else:
-        return -1
+        result = False
+        def f(self):
+            return result
+
 #sanity check
 #print(Blacklist.json['domain'])
 #print("-------------------")
