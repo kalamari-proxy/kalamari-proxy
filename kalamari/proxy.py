@@ -19,7 +19,7 @@ class ProxyServer():
         '''
         # Read the request method
         method_line = await reader.readline()
-        verb, url, version = ProxyServer.parse_method(method_line)
+        verb, url, version = ProxyServer.parse_method(method_line.decode("utf-8"))
         hostname, port, path = ProxyServer.parse_url(url)
 
         # Read headers from the request
