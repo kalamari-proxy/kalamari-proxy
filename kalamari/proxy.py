@@ -1,7 +1,7 @@
 import asyncio
 import http.client
 import email.parser
-
+from urlparse import urlparse
 
 class ProxyServer():
     '''
@@ -19,14 +19,15 @@ class ProxyServer():
         '''
         # Read the request method
         method_line = await reader.readline()
-        print('method:', method_line)
+        verb, url, version = parse_method(method_line)
+        hostname, port, path = parse_url(url)
 
         # Read headers from the request
         headers = await self.parse_headers(reader)
 
         # Create an HTTP request object to contain the details
         # TODO: stop using hardcoded values. Use parsed values instead.
-        request = HTTPRequest('GET', 'localhost', 80, 'http://localhost/', headers)
+        request = HTTPRequest('GET', hostname, port, path, headers)
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
 
@@ -35,6 +36,50 @@ class ProxyServer():
         # Send a default response. TODO: change this.
         # writer.write(b'HTTP/1.1 404 Not Found\n\n')
         # writer.close()
+
+    def parse_method(method):
+        '''
+        Given an HTTP request method line like:
+
+        GET http://foobar.com/ HTTP/1.1\r\n
+
+        Parse that line into the verb (GET), url (http://foobar.com/), and
+        protocol (HTTP/1.1). This method returns these values arranged in a
+        tuple like:
+
+        ("GET", "http://foobar.com/", "HTTP/1.1")
+        '''
+
+        split = method.split(' ')
+
+        # check for HTTP verb (GET, POST, etc.)
+        if len(split) < 1:
+            raise "missing HTTP verb"
+        else:
+            verb = split[0]
+
+        # check for HTTP request target (aka URL)
+        if len(split) < 2:
+            raise "missing request target"
+        else:
+            target = split[1]
+
+        # check for HTTP version
+        if len(split) < 3:
+            raise "missing HTTP version"
+        else:
+            # remove CRLF from end of method line
+            version = split[2].strip()
+
+        return (verb, target, version)
+
+    def parse_url(url):
+        '''
+        Decompose a URL and return a tuple containing:
+        (hostname, port, path)
+        '''
+        parsed = urlparse(url)
+        return (hostname, port or 80, path or '/')
 
     @classmethod
     async def parse_headers(cls, reader):
