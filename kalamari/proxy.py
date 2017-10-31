@@ -1,7 +1,7 @@
 import asyncio
 import http.client
 import email.parser
-
+from urlparse import urlparse
 
 class ProxyServer():
     '''
@@ -71,6 +71,14 @@ class ProxyServer():
             version = split[2].strip()
 
         return (verb, target, version)
+
+    def parse_url(url):
+        '''
+        Decompose a URL and return a tuple containing:
+        (hostname, port, path)
+        '''
+        parsed = urlparse(url)
+        return (hostname, port or 80, path or '/')
 
     @classmethod
     async def parse_headers(cls, reader):
