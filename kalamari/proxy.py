@@ -19,14 +19,15 @@ class ProxyServer():
         '''
         # Read the request method
         method_line = await reader.readline()
-        print('method:', method_line)
+        verb, url, version = parse_method(method_line)
+        hostname, port, path = parse_url(url)
 
         # Read headers from the request
         headers = await self.parse_headers(reader)
 
         # Create an HTTP request object to contain the details
         # TODO: stop using hardcoded values. Use parsed values instead.
-        request = HTTPRequest('GET', 'localhost', 80, 'http://localhost/', headers)
+        request = HTTPRequest('GET', hostname, port, path, headers)
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
 
