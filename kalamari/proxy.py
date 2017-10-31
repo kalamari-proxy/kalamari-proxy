@@ -36,6 +36,42 @@ class ProxyServer():
         # writer.write(b'HTTP/1.1 404 Not Found\n\n')
         # writer.close()
 
+    def parse_method(method):
+        '''
+        Given an HTTP request method line like:
+
+        GET http://foobar.com/ HTTP/1.1\r\n
+
+        Parse that line into the verb (GET), url (http://foobar.com/), and
+        protocol (HTTP/1.1). This method returns these values arranged in a
+        tuple like:
+
+        ("GET", "http://foobar.com/", "HTTP/1.1")
+        '''
+
+        split = method.split(' ')
+
+        # check for HTTP verb (GET, POST, etc.)
+        if len(split) < 1:
+            raise "missing HTTP verb"
+        else:
+            verb = split[0]
+
+        # check for HTTP request target (aka URL)
+        if len(split) < 2:
+            raise "missing request target"
+        else:
+            target = split[1]
+
+        # check for HTTP version
+        if len(split) < 3:
+            raise "missing HTTP version"
+        else:
+            # remove CRLF from end of method line
+            version = split[2].strip()
+
+        return (verb, target, version)
+
     @classmethod
     async def parse_headers(cls, reader):
         '''
