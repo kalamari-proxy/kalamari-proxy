@@ -1,7 +1,7 @@
 import asyncio
 import http.client
 import email.parser
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 class ProxyServer():
     '''
@@ -79,7 +79,7 @@ class ProxyServer():
         (hostname, port, path)
         '''
         parsed = urlparse(url)
-        return (hostname, port or 80, path or '/')
+        return (parsed.hostname, parsed.port or 80, parsed.path or '/')
 
     @classmethod
     async def parse_headers(cls, reader):
