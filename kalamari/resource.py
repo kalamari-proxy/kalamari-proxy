@@ -23,75 +23,75 @@ def jsonTOstrings(jsonOBJ):
     for d in jsonOBJ['domain']:
         domains = domains + d + "|"
     domains = domains[:-1]
+
     for p in jsonOBJ['path']:
         paths = paths + p + "|"
     paths = paths[:-1]
+
     for m in jsonOBJ['misc']:
         miscs = miscs + m + "|"
     miscs = miscs[:-1]
+
     strings.append(domains)
     strings.append(paths)
     strings.append(miscs)
     return strings
 
 # Generic list class
-class Resource_list():
+class Resource_list:
     def __init__(self,json):
         self.json = obtainJSON(json)    # json object unique to each instance
         #build regex here, will implement the jsonTOstrings function being printed below
         # current regex is not correct
-        # self.strings = jsonTOstrings(self.json)
-        self.regex = re.compile('http')
+        strings = jsonTOstrings(self.json)
+        self.regex = re.compile(r'http://' + r'(' + strings[0]+ r')' + r'('+strings[1]+r')' + strings[2])
 
 #will need to initialize these in their own function (refresh)
 Blacklist = Resource_list(blacklisturl)
-Whitelist = Resource_list(whitelisturl)
-Cachelist = Resource_list(cachelisturl)
+#Whitelist = Resource_list(whitelisturl)
+#Cachelist = Resource_list(cachelisturl)
 
 # Not how to set up these classes
 class Check_black:
     def __init__(self,request):
-            self.request = request
-
-    match = Blacklist.regex.match(request)
-    if match:
-        result = True
-    else:
-        result = False
-        def f(self):
-            return result
-
-
+        self.request = request
+        match = Blacklist.regex.match(request)
+        if match:
+            result = True
+        else:
+            result = False
+        print (result)
 
 class Check_white:
     def __init__(self,request):
-            self.request = request
-            
-    match = Whitelist.regex.match(request)
-    if match:
-        result = True
-    else:
-        result = False
-        def f(self):
-            return result
+        self.request = request
+        match = Whitelist.regex.match(request)
+        if match:
+            result = True
+        else:
+            result = False
+        return result
 
 class Check_cache:
     def __init__(self,request):
-            self.request = request
-    match = Cachelist.regex.match(request)
-    if match:
-        result = True
-    else:
-        result = False
-        def f(self):
-            return result
+        self.request = request
+        match = Cachelist.regex.match(request)
+        if match:
+            result = True
+        else:
+            result = False
+        return result
 
 #sanity check
 #print(Blacklist.json['domain'])
 #print("-------------------")
-s = jsonTOstrings(Blacklist.json)
-print(s[0])
-print("-------------------")
-print(s[1])
-print("-------------------")
-print(s[2])
+# s = jsonTOstrings(Blacklist.json)
+# print(s[0])
+# print("-------------------")
+# print(s[1])
+# print("-------------------")
+# print(s[2])
+print(Blacklist.regex)
+
+Check_black('http://adf.ly/ads/.facebook.com/somedir/something.js')
+Check_black('http://freakshare.com/advertisements/')
