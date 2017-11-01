@@ -5,7 +5,6 @@ import logging
 import http.client
 import email.parser
 from urllib.parse import urlparse
-import logging
 
 class ProxyServer():
     '''
@@ -18,6 +17,8 @@ class ProxyServer():
         self.loop = loop
 
         logging.info("Initializing proxy...")
+
+        self.next_sess_id = 1
     
     async def handler(self, reader, writer):
         '''
@@ -31,16 +32,19 @@ class ProxyServer():
         method, target, version = ProxyServer.parse_method(method_line)
         if method == 'CONNECT':
             hostname, port = target.split(':')
-            request = HTTPRequest(method, hostname, port, '', headers)
+            request = HTTPRequest(method, hostname, port, '', headers, self.next_sess_id)
         else:
             hostname, port, path = ProxyServer.parse_url(target)
-            request = HTTPRequest(method, hostname, port, path, headers)
+            request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
         logging.info(request)
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
         self.loop.create_task(proxysession.run())
+
+        # increment session id
+        self.next_sess_id += 1
 
     @staticmethod
     def parse_method(method):
@@ -124,12 +128,13 @@ class HTTPRequest():
     '''
     Class to store information about a request.
     '''
-    def __init__(self, method, hostname, port, path, headers):
+    def __init__(self, method, hostname, port, path, headers, session_id):
         self.method = method
         self.host = hostname
         self.port = port
         self.path = path
         self.headers = headers
+        self.session_id = session_id
 
         self.time = time.time()
 
@@ -140,12 +145,13 @@ class HTTPRequest():
 
     def __str__(self):
         return (
-            'HTTP REQUEST - '
-            'method={0}, '
-            'host={1}, '
-            'port={2}, '
-            'path={3}'
+            'HTTP REQUEST (Session {0}) - '
+            'method={1}, '
+            'host={2}, '
+            'port={3}, '
+            'path={4}'
             ).format(
+            self.session_id,
             self.method,
             self.host,
             self.port,
