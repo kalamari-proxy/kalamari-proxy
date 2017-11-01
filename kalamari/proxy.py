@@ -26,25 +26,24 @@ class ProxyServer():
         '''
         Handler for incoming proxy requests.
         '''
-        # Read the request method
-        method_line = await reader.readline()
-        verb, url, version = ProxyServer.parse_method(method_line.decode("utf-8"))
-        hostname, port, path = ProxyServer.parse_url(url)
-
-        # Read headers from the request
+        # Read the request method and headers
+        method_line = (await reader.readline()).decode('utf8')
         headers = await self.parse_headers(reader)
 
-        # Create an HTTP request object to contain the details
-        request = HTTPRequest(verb, hostname, port, path, headers)
+        # Parse method line
+        method, target, version = ProxyServer.parse_method(method_line)
+        if method == 'CONNECT':
+            hostname, port = target.split(':')
+            request = HTTPRequest(method, hostname, port, '', headers)
+        else:
+            hostname, port, path = ProxyServer.parse_url(target)
+            request = HTTPRequest(method, hostname, port, path, headers)
         logging.info(request)
+
+        # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
-
         self.loop.create_task(proxysession.run())
-
-        # Send a default response. TODO: change this.
-        # writer.write(b'HTTP/1.1 404 Not Found\n\n')
-        # writer.close()
 
     @staticmethod
     def parse_method(method):
@@ -215,6 +214,13 @@ class ProxySessionOutput(asyncio.Protocol):
         Forward the request to the remote server.
         '''
         self.transport = transport
+
+        # Special handling for the CONNECT method.
+        # Notify the client that the connection has been opened.
+        if self.request.method == 'CONNECT':
+            self.proxysession.writer.write(b'HTTP/1.1 200 OK\n\n')
+            return
+
         self.transport.write('GET {path} HTTP/1.1\nHost: {host}\nConnection: close\n\n'.format(**{
             'host': self.request.host,
             'path': self.request.path
