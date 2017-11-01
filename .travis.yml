@@ -6,6 +6,6 @@ install:
   - pip install -r requirements_test.txt
   - pip install coveralls
 script:
-  - nosetests --with-coverage --cover-package='.'
+  - ./.travis.sh
 after_success:
   - coveralls
