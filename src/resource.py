@@ -59,3 +59,26 @@ class ResourceList():
                 return True
 
         return False
+
+
+class CacheList():
+    def __init__(self):
+        self.resources = dict()
+
+    def load(self, url):
+        ruleset = fetch_json(url)
+
+        for rule, url in ruleset.items():
+            try:
+                rule_regex = re.compile(rule)
+            except Exception as err:
+                continue  # skipping invalid regex
+            self.resources[re.compile(rule)] = url
+
+    def check(self, request):
+        url = request.host + request.path
+        for rule, redirect in self.resources.items():
+            if rule.match(url):
+                return redirect
+
+        return None

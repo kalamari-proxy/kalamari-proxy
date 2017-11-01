@@ -68,3 +68,29 @@ class TestResource(unittest.TestCase):
         self.assertTrue(rl.check(request))
         request = proxy.HTTPRequest('GET', 'example.com', 80, '/good', {}, 1)
         self.assertFalse(rl.check(request))
+
+
+class TestCacheList(unittest.TestCase):
+    @unittest.mock.patch('resource.fetch_json')
+    def test_check(self, mock_fetch_json):
+        RULES = {'example\.com/file': 'test.com/file'}
+        mock_fetch_json.return_value = RULES
+
+        cl = resource.CacheList()
+        cl.load(config.cachelist)
+
+        request = proxy.HTTPRequest('GET', 'example.com', 80, '/file', {}, 1)
+        self.assertEquals(cl.check(request), 'test.com/file')
+        request = proxy.HTTPRequest('GET', 'example.com', 80, '/thing', {}, 1)
+        self.assertIsNone(cl.check(request))
+
+    @unittest.mock.patch('resource.fetch_json')
+    def test_load_invalid_regex(self, mock_fetch_json):
+        '''
+        Test that loading an invalid regex does not raise an exception.
+        '''
+        RULES = {'exa(mple\.com/file': 'test.com/file'}
+        mock_fetch_json.return_value = RULES
+
+        cl = resource.CacheList()
+        cl.load(config.cachelist)
