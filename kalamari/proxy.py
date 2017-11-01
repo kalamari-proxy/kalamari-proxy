@@ -142,15 +142,17 @@ class HTTPRequest():
         return False
 
     def __str__(self):
-        ret = 'Request: {method} {path}'.format(**{
-            'method': self.method,
-            'path': self.path
-        })
-        if self.headers:
-            ret += '\n'
-            ret += '\n'.join(['\t%s:%s' % (k, v) for k, v in self.headers.items()])
-        return ret
-
+        return (
+            'HTTP REQUEST - '
+            'method={0}, '
+            'host={1}, '
+            'port={2}, '
+            'path={3}'
+            ).format(
+            self.method,
+            self.host,
+            self.port,
+            self.path)
 
 class ProxySession():
     '''
