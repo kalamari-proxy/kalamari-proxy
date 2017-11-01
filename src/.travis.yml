@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+install:
+  - pip install -r requirements_test.txt
+  - pip install coveralls
+script:
+  - nosetests --with-coverage --cover-package='.'
+after_success:
+  - coveralls
