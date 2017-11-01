@@ -5,6 +5,7 @@ import logging
 import http.client
 import email.parser
 from urllib.parse import urlparse
+import logging
 
 class ProxyServer():
     '''
@@ -15,6 +16,11 @@ class ProxyServer():
 
     def __init__(self, loop):
         self.loop = loop
+
+        # setup logging for proxy server
+        logging.basicConfig(filename='server.log',level=logging.DEBUG)
+
+        logging.info("Initializing proxy...")
     
     async def handler(self, reader, writer):
         '''
