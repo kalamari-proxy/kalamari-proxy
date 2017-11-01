@@ -1,5 +1,7 @@
 import unittest
+import time
 import proxy
+
 
 class TestProxyServer(unittest.TestCase):
     def test_parse_method(self):
@@ -24,3 +26,12 @@ class TestProxyServer(unittest.TestCase):
         METHOD = ''
         with self.assertRaises(ValueError):
             proxy.ProxyServer.parse_method(METHOD)
+
+
+class TestHTTPRequest(unittest.TestCase):
+    def test_timed_out(self):
+        request = proxy.HTTPRequest('GET', 'example.com', 80, '/', {})
+        self.assertFalse(request.timed_out())
+
+        request.time = time.time() - 1000
+        self.assertTrue(request.timed_out())
