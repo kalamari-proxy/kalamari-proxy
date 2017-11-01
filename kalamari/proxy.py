@@ -1,3 +1,5 @@
+import time
+import config
 import asyncio
 import logging
 import http.client
@@ -27,7 +29,6 @@ class ProxyServer():
         headers = await self.parse_headers(reader)
 
         # Create an HTTP request object to contain the details
-        # TODO: stop using hardcoded values. Use parsed values instead.
         request = HTTPRequest(verb, hostname, port, path, headers)
         logging.info(request)
         proxysession = ProxySession(self.loop, reader, writer, request)
@@ -56,19 +57,19 @@ class ProxyServer():
 
         # check for HTTP verb (GET, POST, etc.)
         if len(split) < 1:
-            raise "missing HTTP verb"
+            raise Exception('Missing HTTP verb')
         else:
             verb = split[0]
 
         # check for HTTP request target (aka URL)
         if len(split) < 2:
-            raise "missing request target"
+            raise Exception('missing request target')
         else:
             target = split[1]
 
         # check for HTTP version
         if len(split) < 3:
-            raise "missing HTTP version"
+            raise Exception('missing HTTP version')
         else:
             # remove CRLF from end of method line
             version = split[2].strip()
@@ -128,6 +129,13 @@ class HTTPRequest():
         self.path = path
         self.headers = headers
 
+        self.time = time.time()
+
+    def timed_out(self):
+        if time.time() - self.time > config.timeout:
+            return True
+        return False
+
     def __str__(self):
         ret = 'Request: {method} {path}'.format(**{
             'method': self.method,
@@ -164,6 +172,13 @@ class ProxySession():
         self.task = asyncio.async(coro)
 
     async def run(self):
+        while not self.output.ready() and not self.request.timed_out():
+            await asyncio.sleep(0.5)
+
+        if self.request.timed_out():
+            logging.info('Request timed out: %s' % self.request)
+            return
+
         while not self.reader.at_eof():
             data = await self.reader.read(8192)
             self.output.transport.write(data)
@@ -179,6 +194,14 @@ class ProxySessionOutput(asyncio.Protocol):
         self.proxysession = proxysession
         self.request = request
         self.transport = None
+
+    def ready(self):
+        '''
+        Indicates if we are ready to forward output.
+        '''
+        if self.transport is None:
+            return False
+        return True
 
     def connection_made(self, transport):
         '''
