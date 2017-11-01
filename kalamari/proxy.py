@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import http.client
 import email.parser
 from urllib.parse import urlparse
@@ -33,7 +34,8 @@ class ProxyServer():
 
         # Create an HTTP request object to contain the details
         # TODO: stop using hardcoded values. Use parsed values instead.
-        request = HTTPRequest('GET', hostname, port, path, headers)
+        request = HTTPRequest(verb, hostname, port, path, headers)
+        logging.info(request)
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
 
@@ -56,7 +58,6 @@ class ProxyServer():
 
         ("GET", "http://foobar.com/", "HTTP/1.1")
         '''
-
         split = method.split(' ')
 
         # check for HTTP verb (GET, POST, etc.)
@@ -87,7 +88,10 @@ class ProxyServer():
         (hostname, port, path)
         '''
         parsed = urlparse(url)
-        return (parsed.hostname, parsed.port or 80, parsed.path or '/')
+        path = parsed.path or '/'
+        if parsed.query:
+            path += '?%s' % parsed.query
+        return (parsed.netloc, parsed.port or 80, path)
 
     @classmethod
     async def parse_headers(cls, reader):
@@ -129,6 +133,16 @@ class HTTPRequest():
         self.port = port
         self.path = path
         self.headers = headers
+
+    def __str__(self):
+        ret = 'Request: {method} {path}'.format(**{
+            'method': self.method,
+            'path': self.path
+        })
+        if self.headers:
+            ret += '\n'
+            ret += '\n'.join(['\t%s:%s' % (k, v) for k, v in self.headers.items()])
+        return ret
 
 
 class ProxySession():
