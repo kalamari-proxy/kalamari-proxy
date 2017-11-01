@@ -15,8 +15,7 @@ def fetch_json(url):
 
 class ResourceList():
     '''
-    Generic list class. Gets passed a url referring to Blacklist, Cachelist,
-    or Whitelist. Produces json object and REGEX.
+    Stores a ruleset and allows checking a request against the ruleset.
     '''
     def __init__(self):
         self.domains = set()
@@ -24,6 +23,9 @@ class ResourceList():
         self.full_regex = None
 
     def load(self, url):
+        '''
+        Download a ruleset from a given URL.
+        '''
         ruleset = fetch_json(url)
 
         if 'domain' in ruleset:
@@ -62,6 +64,10 @@ class ResourceList():
 
 
 class CacheList():
+    '''
+    Holds a cached resource ruleset and allows checking a request for
+    a better location to load the cached resource from.
+    '''
     def __init__(self):
         self.resources = dict()
 
@@ -76,6 +82,9 @@ class CacheList():
             self.resources[re.compile(rule)] = url
 
     def check(self, request):
+        '''
+        :return: a new URL as a string or None if no rule matches.
+        '''
         url = request.host + request.path
         for rule, redirect in self.resources.items():
             if rule.match(url):
