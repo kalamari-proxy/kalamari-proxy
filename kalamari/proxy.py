@@ -28,7 +28,7 @@ class ProxyServer():
 
         # Create an HTTP request object to contain the details
         # TODO: stop using hardcoded values. Use parsed values instead.
-        request = HTTPRequest('GET', hostname, port, path, headers)
+        request = HTTPRequest(verb, hostname, port, path, headers)
         logging.info(request)
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
@@ -52,7 +52,6 @@ class ProxyServer():
 
         ("GET", "http://foobar.com/", "HTTP/1.1")
         '''
-
         split = method.split(' ')
 
         # check for HTTP verb (GET, POST, etc.)
@@ -83,7 +82,10 @@ class ProxyServer():
         (hostname, port, path)
         '''
         parsed = urlparse(url)
-        return (parsed.hostname, parsed.port or 80, parsed.path or '/')
+        path = parsed.path or '/'
+        if parsed.query:
+            path += '?%s' % parsed.query
+        return (parsed.netloc, parsed.port or 80, path)
 
     @classmethod
     async def parse_headers(cls, reader):
@@ -127,9 +129,8 @@ class HTTPRequest():
         self.headers = headers
 
     def __str__(self):
-        ret = 'Request: {method} {host}{path}'.format(**{
+        ret = 'Request: {method} {path}'.format(**{
             'method': self.method,
-            'host': self.host,
             'path': self.path
         })
         if self.headers:
