@@ -1,7 +1,11 @@
+import time
+import config
 import asyncio
+import logging
 import http.client
 import email.parser
 from urllib.parse import urlparse
+import logging
 
 class ProxyServer():
     '''
@@ -12,30 +16,34 @@ class ProxyServer():
 
     def __init__(self, loop):
         self.loop = loop
+
+        # setup logging for proxy server
+        logging.basicConfig(filename='server.log',level=logging.DEBUG)
+
+        logging.info("Initializing proxy...")
     
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
         '''
-        # Read the request method
-        method_line = await reader.readline()
-        verb, url, version = ProxyServer.parse_method(method_line.decode("utf-8"))
-        hostname, port, path = ProxyServer.parse_url(url)
-
-        # Read headers from the request
+        # Read the request method and headers
+        method_line = (await reader.readline()).decode('utf8')
         headers = await self.parse_headers(reader)
 
-        # Create an HTTP request object to contain the details
-        # TODO: stop using hardcoded values. Use parsed values instead.
-        request = HTTPRequest('GET', hostname, port, path, headers)
+        # Parse method line
+        method, target, version = ProxyServer.parse_method(method_line)
+        if method == 'CONNECT':
+            hostname, port = target.split(':')
+            request = HTTPRequest(method, hostname, port, '', headers)
+        else:
+            hostname, port, path = ProxyServer.parse_url(target)
+            request = HTTPRequest(method, hostname, port, path, headers)
+        logging.info(request)
+
+        # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
-
         self.loop.create_task(proxysession.run())
-
-        # Send a default response. TODO: change this.
-        # writer.write(b'HTTP/1.1 404 Not Found\n\n')
-        # writer.close()
 
     @staticmethod
     def parse_method(method):
@@ -50,24 +58,23 @@ class ProxyServer():
 
         ("GET", "http://foobar.com/", "HTTP/1.1")
         '''
-
         split = method.split(' ')
 
         # check for HTTP verb (GET, POST, etc.)
         if len(split) < 1:
-            raise "missing HTTP verb"
+            raise Exception('Missing HTTP verb')
         else:
             verb = split[0]
 
         # check for HTTP request target (aka URL)
         if len(split) < 2:
-            raise "missing request target"
+            raise Exception('missing request target')
         else:
             target = split[1]
 
         # check for HTTP version
         if len(split) < 3:
-            raise "missing HTTP version"
+            raise Exception('missing HTTP version')
         else:
             # remove CRLF from end of method line
             version = split[2].strip()
@@ -81,7 +88,10 @@ class ProxyServer():
         (hostname, port, path)
         '''
         parsed = urlparse(url)
-        return (parsed.hostname, parsed.port or 80, parsed.path or '/')
+        path = parsed.path or '/'
+        if parsed.query:
+            path += '?%s' % parsed.query
+        return (parsed.netloc, parsed.port or 80, path)
 
     @classmethod
     async def parse_headers(cls, reader):
@@ -124,6 +134,25 @@ class HTTPRequest():
         self.path = path
         self.headers = headers
 
+        self.time = time.time()
+
+    def timed_out(self):
+        if time.time() - self.time > config.timeout:
+            return True
+        return False
+
+    def __str__(self):
+        return (
+            'HTTP REQUEST - '
+            'method={0}, '
+            'host={1}, '
+            'port={2}, '
+            'path={3}'
+            ).format(
+            self.method,
+            self.host,
+            self.port,
+            self.path)
 
 class ProxySession():
     '''
@@ -150,6 +179,13 @@ class ProxySession():
         self.task = asyncio.async(coro)
 
     async def run(self):
+        while not self.output.ready() and not self.request.timed_out():
+            await asyncio.sleep(0.5)
+
+        if self.request.timed_out():
+            logging.info('Request timed out: %s' % self.request)
+            return
+
         while not self.reader.at_eof():
             data = await self.reader.read(8192)
             self.output.transport.write(data)
@@ -166,12 +202,27 @@ class ProxySessionOutput(asyncio.Protocol):
         self.request = request
         self.transport = None
 
+    def ready(self):
+        '''
+        Indicates if we are ready to forward output.
+        '''
+        if self.transport is None:
+            return False
+        return True
+
     def connection_made(self, transport):
         '''
         Callback for when the network connection was successful.
         Forward the request to the remote server.
         '''
         self.transport = transport
+
+        # Special handling for the CONNECT method.
+        # Notify the client that the connection has been opened.
+        if self.request.method == 'CONNECT':
+            self.proxysession.writer.write(b'HTTP/1.1 200 OK\n\n')
+            return
+
         self.transport.write('GET {path} HTTP/1.1\nHost: {host}\nConnection: close\n\n'.format(**{
             'host': self.request.host,
             'path': self.request.path
