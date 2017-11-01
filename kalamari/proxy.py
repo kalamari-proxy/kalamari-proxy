@@ -36,7 +36,7 @@ class ProxyServer():
         else:
             hostname, port, path = ProxyServer.parse_url(target)
             request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
-        logging.info(request)
+        logging.info('HTTP REQUEST ' + str(request))
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
@@ -145,7 +145,7 @@ class HTTPRequest():
 
     def __str__(self):
         return (
-            'HTTP REQUEST (Session {0}) - '
+            '(Session {0}) - '
             'method={1}, '
             'host={2}, '
             'port={3}, '
@@ -218,7 +218,12 @@ class ProxySessionOutput(asyncio.Protocol):
         Callback for when the network connection was successful.
         Forward the request to the remote server.
         '''
+
+        logging.debug('CONNECTION SUCCESSFUL TO REMOTE (Session {0})'.format(self.request.session_id))
+
         self.transport = transport
+
+        logging.debug('FORWARDING REQUEST TO REMOTE (Session {0})'.format(self.request.session_id))
 
         # Special handling for the CONNECT method.
         # Notify the client that the connection has been opened.
@@ -236,6 +241,9 @@ class ProxySessionOutput(asyncio.Protocol):
         Callback for when data was received over the network.
         Pass the data to the proxy session.
         '''
+
+        logging.debug('RESPONSE RECEIEVED FROM REMOTE (Session {0})'.format(self.request.session_id))
+
         self.proxysession.writer.write(data)
 
     def connection_lost(self, exc):
@@ -243,4 +251,7 @@ class ProxySessionOutput(asyncio.Protocol):
         Callback for when thenetwork connection is closed.
         Notify the proxy session to close.
         '''
+
+        logging.debug('DISCONNECTED FROM REMOTE (Session {0})'.format(self.request.session_id))
+
         self.proxysession.writer.close()
