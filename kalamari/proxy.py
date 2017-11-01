@@ -19,7 +19,7 @@ class ProxyServer():
         logging.info("Initializing proxy...")
 
         self.next_sess_id = 1
-    
+  
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
