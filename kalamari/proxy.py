@@ -36,6 +36,7 @@ class ProxyServer():
         else:
             hostname, port, path = ProxyServer.parse_url(target)
             request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
+
         logging.info('HTTP REQUEST ' + str(request))
 
         # Create a ProxySession instance to handle the request
@@ -244,7 +245,11 @@ class ProxySessionOutput(asyncio.Protocol):
 
         logging.debug('RESPONSE RECEIEVED FROM REMOTE (Session {0})'.format(self.request.session_id))
 
+        logging.debug('FORWARDING RESPONSE TO USER (Session {0})'.format(self.request.session_id))
+
         self.proxysession.writer.write(data)
+
+        logging.debug('FORWARDED RESPONSE TO USER (Session {0})'.format(self.request.session_id))
 
     def connection_lost(self, exc):
         '''
