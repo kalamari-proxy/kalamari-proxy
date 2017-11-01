@@ -44,12 +44,12 @@ class Resource_list:
         #build regex here, will implement the jsonTOstrings function being printed below
         # current regex is not correct
         strings = jsonTOstrings(self.json)
-        self.regex = re.compile(r'http://' + r'(' + strings[0]+ r')' + r'('+strings[1]+r')' + strings[2])
+        self.regex = re.compile(r'http://' + r'(' + strings[0]+ r')' + r'('+strings[1]+r')' + strings[2] )
 
 #will need to initialize these in their own function (refresh)
 Blacklist = Resource_list(blacklisturl)
-#Whitelist = Resource_list(whitelisturl)
-#Cachelist = Resource_list(cachelisturl)
+Whitelist = Resource_list(whitelisturl)
+Cachelist = Resource_list(cachelisturl)
 
 # Not how to set up these classes
 class Check_black:
