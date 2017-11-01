@@ -63,19 +63,19 @@ class ProxyServer():
 
         # check for HTTP verb (GET, POST, etc.)
         if len(split) < 1:
-            raise Exception('Missing HTTP verb')
+            raise ValueError('Missing HTTP verb')
         else:
             verb = split[0]
 
         # check for HTTP request target (aka URL)
         if len(split) < 2:
-            raise Exception('missing request target')
+            raise ValueError('missing request target')
         else:
             target = split[1]
 
         # check for HTTP version
         if len(split) < 3:
-            raise Exception('missing HTTP version')
+            raise ValueError('missing HTTP version')
         else:
             # remove CRLF from end of method line
             version = split[2].strip()
