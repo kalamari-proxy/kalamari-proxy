@@ -22,7 +22,7 @@ class ProxyServer():
         logging.basicConfig(filename='server.log',level=logging.DEBUG)
 
         logging.info("Initializing proxy...")
-    
+
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
