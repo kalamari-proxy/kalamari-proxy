@@ -29,3 +29,21 @@ class TestConnectExternalWebsites(unittest.TestCase):
                          proxies=proxies)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text, 'success\n')
+
+    def test_get_duckduckgo_https(self):
+        '''
+        Test connection by requesting https://duckduckgo.com and checking
+        that the status code is 200 and "DuckDuckGo" is in the response.
+        '''
+        r = requests.get('https://duckduckgo.com/', proxies=proxies)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('DuckDuckGo', r.text)
+
+    def test_get_github_redirect(self):
+        '''
+        Test connection by requesting http://github.com/ and checking
+        that we are redirected.
+        '''
+        r = requests.get('http://github.com/', proxies=proxies)
+        self.assertEqual(r.history[0].status_code, 301)
+        self.assertEqual(r.url, 'https://github.com/')
