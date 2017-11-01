@@ -10,7 +10,7 @@ import config
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    
+
     loop = asyncio.get_event_loop()
     proxy_instance = proxy.ProxyServer(loop)
     coro = asyncio.start_server(proxy_instance.handler, '0.0.0.0', 3128,
