@@ -30,7 +30,7 @@ class TestProxyServer(unittest.TestCase):
 
 class TestHTTPRequest(unittest.TestCase):
     def test_timed_out(self):
-        request = proxy.HTTPRequest('GET', 'example.com', 80, '/', {})
+        request = proxy.HTTPRequest('GET', 'example.com', 80, '/', {}, 1)
         self.assertFalse(request.timed_out())
 
         request.time = time.time() - 1000
