@@ -1,6 +1,5 @@
 import time
 import asyncio
-import logging
 import http.client
 import email.parser
 from urllib.parse import urlparse
@@ -18,11 +17,10 @@ class ProxyServer():
     def __init__(self, loop):
         self.loop = loop
 
-        # setup logging for proxy server
-        logging.basicConfig(filename='server.log',level=logging.DEBUG)
-
         logging.info("Initializing proxy...")
 
+        self.next_sess_id = 1
+  
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
@@ -35,16 +33,20 @@ class ProxyServer():
         method, target, version = ProxyServer.parse_method(method_line)
         if method == 'CONNECT':
             hostname, port = target.split(':')
-            request = HTTPRequest(method, hostname, port, '', headers)
+            request = HTTPRequest(method, hostname, port, '', headers, self.next_sess_id)
         else:
             hostname, port, path = ProxyServer.parse_url(target)
-            request = HTTPRequest(method, hostname, port, path, headers)
-        logging.info(request)
+            request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
+
+        logging.info('HTTP REQUEST ' + str(request))
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
         proxysession.connect()
         self.loop.create_task(proxysession.run())
+
+        # increment session id
+        self.next_sess_id += 1
 
     @staticmethod
     def parse_method(method):
@@ -128,12 +130,13 @@ class HTTPRequest():
     '''
     Class to store information about a request.
     '''
-    def __init__(self, method, hostname, port, path, headers):
+    def __init__(self, method, hostname, port, path, headers, session_id):
         self.method = method
         self.host = hostname
         self.port = port
         self.path = path
         self.headers = headers
+        self.session_id = session_id
 
         self.time = time.time()
 
@@ -144,16 +147,18 @@ class HTTPRequest():
 
     def __str__(self):
         return (
-            'HTTP REQUEST - '
-            'method={0}, '
-            'host={1}, '
-            'port={2}, '
-            'path={3}'
+            '(Session {0}) - '
+            'method={1}, '
+            'host={2}, '
+            'port={3}, '
+            'path={4}'
             ).format(
+            self.session_id,
             self.method,
             self.host,
             self.port,
             self.path)
+
 
 class ProxySession():
     '''
@@ -216,7 +221,12 @@ class ProxySessionOutput(asyncio.Protocol):
         Callback for when the network connection was successful.
         Forward the request to the remote server.
         '''
+
+        logging.debug('CONNECTION SUCCESSFUL TO REMOTE (Session {0})'.format(self.request.session_id))
+
         self.transport = transport
+
+        logging.debug('FORWARDING REQUEST TO REMOTE (Session {0})'.format(self.request.session_id))
 
         # Special handling for the CONNECT method.
         # Notify the client that the connection has been opened.
@@ -234,11 +244,21 @@ class ProxySessionOutput(asyncio.Protocol):
         Callback for when data was received over the network.
         Pass the data to the proxy session.
         '''
+
+        logging.debug('RESPONSE RECEIEVED FROM REMOTE (Session {0})'.format(self.request.session_id))
+
+        logging.debug('FORWARDING RESPONSE TO USER (Session {0})'.format(self.request.session_id))
+
         self.proxysession.writer.write(data)
+
+        logging.debug('FORWARDED RESPONSE TO USER (Session {0})'.format(self.request.session_id))
 
     def connection_lost(self, exc):
         '''
         Callback for when thenetwork connection is closed.
         Notify the proxy session to close.
         '''
+
+        logging.debug('DISCONNECTED FROM REMOTE (Session {0})'.format(self.request.session_id))
+
         self.proxysession.writer.close()
