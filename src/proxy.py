@@ -4,7 +4,9 @@ import http.client
 import email.parser
 from urllib.parse import urlparse
 import logging
+
 import config
+import resource
 
 
 class ProxyServer():
@@ -20,6 +22,14 @@ class ProxyServer():
         logging.info("Initializing proxy...")
 
         self.next_sess_id = 1
+
+        # Load blacklist, whitelist, and cache list
+        self.blacklist = resource.ResourceList()
+        self.whitelist = resource.ResourceList()
+        self.cachelist = resource.CacheList()
+        self.blacklist.load(config.blacklist)
+        self.whitelist.load(config.whitelist)
+        self.cachelist.load(config.cachelist)
   
     async def handler(self, reader, writer):
         '''
@@ -39,6 +49,15 @@ class ProxyServer():
             request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
 
         logging.info('HTTP REQUEST ' + str(request))
+
+        # Check if the request is on the blacklist, whitelist, or cachelist
+        if self.blacklist.check(request):
+            logging.info('Request is on the blacklist')
+        if self.whitelist.check(request):
+            logging.info('Request is on the whitelist')
+        redirect = self.cachelist.check(request)
+        if redirect:
+            logging.info('Request is on the cached resource list. New location %s' % redirect)
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
