@@ -46,4 +46,3 @@ class ACL():
 				return True
 
 		return False
-
