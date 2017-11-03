@@ -28,12 +28,12 @@ class ACL():
 				raise ValueError('Invalid IP ACL {0}'.format(net))
 
 	def ip_allowed(self, ip):
-		"""
-		Checks networks to see if the ip should be allowed to access the proxy. 
+        '''
+        Checks networks to see if the ip should be allowed to access the proxy.
 
-		:return: True or False if the IP is allowed.
+        :return: True or False if the IP is allowed.
         :raises: ValueError if an invalid IP address is passed into the function.
-		"""
+        '''
 
 		try:
 			ip_address = ipaddress.IPv4Address(ip)
