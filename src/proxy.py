@@ -57,13 +57,10 @@ class ProxyServer():
             logging.info('Request is on the whitelist')
         redirect = self.cachelist.check(request)
         if redirect:
-            logging.info('Request is on the cached resource list. New location %s' % redirect)
+            logging.info('Request is on the cached resource list.')
             hostname, port, path = ProxyServer.parse_url(redirect)
-            logging.info('%s' % hostname)
-            logging.info('%s' % port)
-            logging.info('%s' % path)
-            request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
-            logging.info('Request set to redirect')
+            request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
+            logging.info('Redirecting request to: %s' % request)
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
@@ -119,7 +116,7 @@ class ProxyServer():
         path = parsed.path or '/'
         if parsed.query:
             path += '?%s' % parsed.query
-        return (parsed.netloc, parsed.port or 80, path)
+        return (parsed.hostname, parsed.port or 80, path)
 
     @classmethod
     async def parse_headers(cls, reader):
