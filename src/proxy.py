@@ -30,7 +30,7 @@ class ProxyServer():
         self.blacklist.load(config.blacklist)
         self.whitelist.load(config.whitelist)
         self.cachelist.load(config.cachelist)
-  
+
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
@@ -58,6 +58,12 @@ class ProxyServer():
         redirect = self.cachelist.check(request)
         if redirect:
             logging.info('Request is on the cached resource list. New location %s' % redirect)
+            hostname, port, path = ProxyServer.parse_url(redirect)
+            logging.info('%s' % hostname)
+            logging.info('%s' % port)
+            logging.info('%s' % path)
+            request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
+            logging.info('Request set to redirect')
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
