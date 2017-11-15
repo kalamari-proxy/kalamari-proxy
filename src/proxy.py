@@ -30,7 +30,7 @@ class ProxyServer():
         self.blacklist.load(config.blacklist)
         self.whitelist.load(config.whitelist)
         self.cachelist.load(config.cachelist)
-  
+
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
@@ -50,14 +50,22 @@ class ProxyServer():
 
         logging.info('HTTP REQUEST ' + str(request))
 
-        # Check if the request is on the blacklist, whitelist, or cachelist
-        if self.blacklist.check(request):
-            logging.info('Request is on the blacklist')
+        # Check if the request is on the blacklist or whitelist
         if self.whitelist.check(request):
             logging.info('Request is on the whitelist')
+        elif self.blacklist.check(request):
+            logging.info('Request is on the blacklist')
+            writer.write(b'HTTP/1.1 404 Not Found\n\n')
+            writer.close()
+            return
+
+        # Check if the request is on the cached resources list
         redirect = self.cachelist.check(request)
         if redirect:
-            logging.info('Request is on the cached resource list. New location %s' % redirect)
+            logging.info('Request is on the cached resource list.')
+            hostname, port, path = ProxyServer.parse_url(redirect)
+            request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
+            logging.info('Redirecting request to: %s' % request)
 
         # Create a ProxySession instance to handle the request
         proxysession = ProxySession(self.loop, reader, writer, request)
@@ -113,7 +121,7 @@ class ProxyServer():
         path = parsed.path or '/'
         if parsed.query:
             path += '?%s' % parsed.query
-        return (parsed.netloc, parsed.port or 80, path)
+        return (parsed.hostname, parsed.port or 80, path)
 
     @classmethod
     async def parse_headers(cls, reader):
