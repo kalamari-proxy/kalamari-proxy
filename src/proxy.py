@@ -151,7 +151,6 @@ class ProxyServer():
         '''
         self.blacklist = resource.ResourceList()
         self.blacklist.load(self, config.blacklist)
-        periodic_refresh()
 
     @classmethod
     async def start_periodic_refresh(interval):
