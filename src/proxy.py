@@ -162,8 +162,8 @@ class ProxyServer():
         interval = interval if interval >= 0 else (12 * 3600)
 
         while True:
-            time.sleep(interval)
             self.refresh_blacklist()
+            await asyncio.sleep(interval)
 
 class HTTPRequest():
     '''
