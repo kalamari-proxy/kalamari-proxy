@@ -145,14 +145,27 @@ class ProxyServer():
         return parser.parsestr(hstring)
 
     @classmethod
-    async def periodic_refresh():
+    async def refresh_blacklist():
         '''
         Refresh blacklist to update and enforce new rule set after 12 hours
         '''
         self.blacklist = resource.ResourceList()
         self.blacklist.load(self, config.blacklist)
         periodic_refresh()
-            
+
+    @classmethod
+    async def start_periodic_refresh(interval):
+        '''
+        Given an interval (in seconds) keep refreshing the blacklist.
+        '''
+
+        # Interval defaults to 12hrs
+        interval = interval if interval >= 0 else (12 * 3600)
+
+        while True:
+            time.sleep(interval)
+            refresh_blacklist()
+
 class HTTPRequest():
     '''
     Class to store information about a request.
