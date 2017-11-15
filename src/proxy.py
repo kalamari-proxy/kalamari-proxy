@@ -144,7 +144,15 @@ class ProxyServer():
         parser = email.parser.Parser(_class=http.client.HTTPMessage)
         return parser.parsestr(hstring)
 
-
+    @classmethod
+    async def periodic_refresh:
+        '''
+        Refresh blacklist to update and enforce new rule set after 12 hours
+         '''
+         self.blacklist = resource.ResourceList()
+         self.blacklist.load(self, config.blacklist)
+         periodic_refresh()
+            
 class HTTPRequest():
     '''
     Class to store information about a request.
