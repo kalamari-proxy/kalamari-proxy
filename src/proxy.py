@@ -145,7 +145,7 @@ class ProxyServer():
         return parser.parsestr(hstring)
 
     @classmethod
-    async def periodic_refresh:
+    async def periodic_refresh():
         '''
         Refresh blacklist to update and enforce new rule set after 12 hours
         '''
