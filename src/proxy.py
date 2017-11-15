@@ -148,10 +148,10 @@ class ProxyServer():
     async def periodic_refresh:
         '''
         Refresh blacklist to update and enforce new rule set after 12 hours
-         '''
-         self.blacklist = resource.ResourceList()
-         self.blacklist.load(self, config.blacklist)
-         periodic_refresh()
+        '''
+        self.blacklist = resource.ResourceList()
+        self.blacklist.load(self, config.blacklist)
+        periodic_refresh()
             
 class HTTPRequest():
     '''
