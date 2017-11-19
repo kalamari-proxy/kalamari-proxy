@@ -1,11 +1,17 @@
 language: python
+services:
+  - docker
 python:
   - "3.5"
   - "3.6"
+before_install:
+  - docker build . -t kalamari
+  - docker run -d -p 3128:3128 -p 8080:8080 -t kalamari
+  - docker ps -a
 install:
   - pip install -r requirements_test.txt
   - pip install coveralls
 script:
-  - ./.travis.sh
+  - nosetests --with-coverage --cover-package='.'
 after_success:
   - coveralls
