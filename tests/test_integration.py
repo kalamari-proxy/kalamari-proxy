@@ -2,6 +2,7 @@
 Integration tests which make full use of all proxy components.
 '''
 import unittest
+import hashlib
 import requests
 
 proxies = {
@@ -47,7 +48,7 @@ class TestConnectExternalWebsites(unittest.TestCase):
         r = requests.get('http://github.com/', proxies=proxies)
         self.assertEqual(r.history[0].status_code, 301)
         self.assertEqual(r.url, 'https://github.com/')
-
+        
     def test_blocked_resource(self):
         '''
         Test blocked resource response by requesting a resource that appears
@@ -55,3 +56,14 @@ class TestConnectExternalWebsites(unittest.TestCase):
         '''
         r = requests.get('http://freakshare.com/',proxies=proxies)
         self.assertEqual(r.status_code, 404)
+        
+    def test_get_example_cached3(self):
+        '''
+        Test cached resource functionality by requesting
+        http://example.com/cached3 and checking that the exxpected file
+        is returned.
+        '''
+        r = requests.get('http://example.com/cached3', proxies=proxies)
+        self.assertEqual(r.status_code, 200)
+        filehash = hashlib.sha1(r.content).hexdigest()
+        self.assertEqual(filehash, 'cf596a256c0b1c49a725a394dba3f6c968ad077c')
