@@ -57,15 +57,20 @@ class ProxyServer():
 
         # this is where we should reject requests that come from unauthorized ip's
         try:
+            #ip_address = writer.get_extra_info('peername')[0]
             ip_address = '127.0.0.1'
 
-            if not self.acl.ip_allowed(ip_address):
-                logging.info('Request from {} comes from disallowed network per ACL\'s, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
-                writer.write(b'HTTP/1.1 403 Forbidden\n\n')
-                writer.close()
+            if ip_address is None:
+                logging.info('Could not get remote IP address')
 
             else:
-                logging.info('Request from {} comes from allowed network per ACL\'s, continuing to process request'.format(ip_address))
+                if not self.acl.ip_allowed(ip_address):
+                    logging.info('Request from {} comes from disallowed network per ACL\'s, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
+                    writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+                    writer.close()
+
+                else:
+                    logging.info('Request from {} comes from allowed network per ACL\'s, continuing to process request'.format(ip_address))
 
         # case where invalid ip address source
         except ValueError:
