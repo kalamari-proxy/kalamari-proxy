@@ -56,11 +56,9 @@ class ProxyServer():
         logging.info('HTTP REQUEST ' + str(request))
 
         # this is where we should reject requests that come from unauthorized ip's
-        # TODO: use writer.get_extra_info to get real IP, figure out Docker networking to have proper source IP
         # TODO: do not continue if IP is invalid
         try:
-            #ip_address = writer.get_extra_info('peername')[0]
-            ip_address = '127.0.0.1'
+            ip_address = writer.get_extra_info('peername')[0]
 
             if ip_address is None:
                 logging.info('Could not get remote IP address')
