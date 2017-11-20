@@ -7,6 +7,7 @@ import logging
 
 import config
 import resource
+import acl
 
 
 class ProxyServer():
@@ -31,6 +32,10 @@ class ProxyServer():
         self.whitelist.load(config.whitelist)
         self.cachelist.load(config.cachelist)
 
+        # create the acl object to handle incoming connections 
+        logging.info("Initializing Access Control Lists (ACL's)")
+        self.acl = acl.ACL(config.ip_acl)
+
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
@@ -49,6 +54,24 @@ class ProxyServer():
             request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
 
         logging.info('HTTP REQUEST ' + str(request))
+
+        # this is where we should reject requests that come from unauthorized ip's
+        try:
+            ip_address = '127.0.0.1'
+
+            if not self.acl.ip_allowed(ip_address):
+                logging.info('Request from {} comes from disallowed network per ACL\'s, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
+                writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+                writer.close()
+
+            else:
+                logging.info('Request from {} comes from allowed network per ACL\'s, continuing to process request'.format(ip_address))
+
+        # case where invalid ip address source
+        except ValueError:
+            logging.error('Invalid Inbound IP Address: {}, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
+            writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+            writer.close()
 
         # Check if the request is on the blacklist or whitelist
         if self.whitelist.check(request):
