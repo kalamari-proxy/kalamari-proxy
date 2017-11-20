@@ -56,12 +56,14 @@ class ProxyServer():
         logging.info('HTTP REQUEST ' + str(request))
 
         # this is where we should reject requests that come from unauthorized ip's
-        # TODO: do not continue if IP is invalid
+        request_allowed_acl = False
         try:
             ip_address = writer.get_extra_info('peername')[0]
 
             if ip_address is None:
                 logging.info('Could not get remote IP address')
+                writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+                writer.close()
 
             else:
                 if not self.acl.ip_allowed(ip_address):
@@ -71,6 +73,7 @@ class ProxyServer():
 
                 else:
                     logging.info('Request from {} comes from allowed network per ACL\'s, continuing to process request'.format(ip_address))
+                    request_allowed_acl = True
 
         # case where invalid ip address source
         except ValueError:
@@ -78,30 +81,32 @@ class ProxyServer():
             writer.write(b'HTTP/1.1 403 Forbidden\n\n')
             writer.close()
 
-        # Check if the request is on the blacklist or whitelist
-        if self.whitelist.check(request):
-            logging.info('Request is on the whitelist')
-        elif self.blacklist.check(request):
-            logging.info('Request is on the blacklist')
-            writer.write(b'HTTP/1.1 404 Not Found\n\n')
-            writer.close()
-            return
 
-        # Check if the request is on the cached resources list
-        redirect = self.cachelist.check(request)
-        if redirect:
-            logging.info('Request is on the cached resource list.')
-            hostname, port, path = ProxyServer.parse_url(redirect)
-            request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
-            logging.info('Redirecting request to: %s' % request)
+        if request_allowed_acl:
+            # Check if the request is on the blacklist or whitelist
+            if self.whitelist.check(request):
+                logging.info('Request is on the whitelist')
+            elif self.blacklist.check(request):
+                logging.info('Request is on the blacklist')
+                writer.write(b'HTTP/1.1 404 Not Found\n\n')
+                writer.close()
+                return
 
-        # Create a ProxySession instance to handle the request
-        proxysession = ProxySession(self.loop, reader, writer, request)
-        proxysession.connect()
-        self.loop.create_task(proxysession.run())
+            # Check if the request is on the cached resources list
+            redirect = self.cachelist.check(request)
+            if redirect:
+                logging.info('Request is on the cached resource list.')
+                hostname, port, path = ProxyServer.parse_url(redirect)
+                request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
+                logging.info('Redirecting request to: %s' % request)
 
-        # increment session id
-        self.next_sess_id += 1
+            # Create a ProxySession instance to handle the request
+            proxysession = ProxySession(self.loop, reader, writer, request)
+            proxysession.connect()
+            self.loop.create_task(proxysession.run())
+
+            # increment session id
+            self.next_sess_id += 1
 
     @staticmethod
     def parse_method(method):
