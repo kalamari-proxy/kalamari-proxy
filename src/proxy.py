@@ -30,6 +30,9 @@ class ProxyServer():
         self.blacklist.load(config.blacklist)
         self.whitelist.load(config.whitelist)
         self.cachelist.load(config.cachelist)
+
+        # Start periodic refresh
+        asyncio.ensure_future(self.start_periodic_refresh(config.list_refresh))
   
     async def handler(self, reader, writer):
         '''
@@ -144,26 +147,43 @@ class ProxyServer():
         parser = email.parser.Parser(_class=http.client.HTTPMessage)
         return parser.parsestr(hstring)
 
-    @classmethod
-    async def refresh_blacklist(self):
+    async def refresh_lists(self):
         '''
-        Refresh blacklist to update and enforce new rule set after 12 hours
+        Refresh blacklist, whitelist, and cached resource lists.
         '''
-        self.blacklist = resource.ResourceList()
-        self.blacklist.load(self, config.blacklist)
+        try:
+            blacklist = resource.ResourceList()
+            blacklist.load(config.blacklist)
+            whitelist = resource.ResourceList()
+            whitelist.load(config.whitelist)
+            cachelist = resource.CacheList()
+            cachelist.load(config.cachelist)
 
-    @classmethod
-    async def start_periodic_refresh(self, interval):
-        '''
-        Given an interval (in seconds) keep refreshing the blacklist.
-        '''
+            self.blacklist = blacklist
+            self.whitelist = whitelist
+            self.cachelist = cachelist
 
-        # Interval defaults to 12hrs
-        interval = interval if interval >= 0 else (12 * 3600)
+        except Exception as err:
+            logging.error('Error encountered while refreshing lists: %s' % err)
+
+    async def start_periodic_refresh(self, interval=12*3600):
+        '''
+        Automatically refresh the blacklist, whitelist, and cached
+        resource list every `interval` seconds. The default interval is
+        12 hours.
+
+        The refresh functionality can be disabled by setting the
+        the refresh interval to a negative number.
+        '''
+        if interval < 0:
+            return
 
         while True:
-            self.refresh_blacklist()
+            # Sleep first because the lists are initialized automatically upon
+            # initializeation. So, we should sleep first.
             await asyncio.sleep(interval)
+            await self.refresh_lists()
+
 
 class HTTPRequest():
     '''
