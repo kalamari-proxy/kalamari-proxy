@@ -8,8 +8,35 @@ import proxy
 
 
 class TestResource(unittest.TestCase):
-    def test_fetch_json(self):
-        raw_data = resource.fetch_json(config.whitelist)
+    @unittest.mock.patch('urllib.request.urlopen')
+    def test_fetch_json(self, mock_urllib_request):
+        json_payload = ('{'
+                        '   "domain": ['
+                        '       "adf.ly",'
+                        '       "freakshare.com",'
+                        '       "adsense.googleblog.com",'
+                        '       "brightcove.com"'
+                        '   ],'
+                        '   "path": ['
+                        '       ".*/advertisements/.*",'
+                        '       ".*/ads/.*",'
+                        '       ".*/tests/blacklist-path/.*"'
+                        '   ],'
+                        '   "misc": ['
+                        '       "kalamari-proxy.github.io/tests/blacklist-misc/wildcard.*.txt"'
+                        '   ]'
+                        '}')
+
+        json_payload = str.encode(json_payload)
+
+        mock_urllib_request.return_value = unittest.mock.MagicMock()
+        mock_urllib_request.return_value.read.return_value = json_payload
+
+        data = resource.fetch_json(config.whitelist)
+
+        self.assertEqual(len(data['domain']), 4)
+        self.assertEqual(len(data['path']), 3)
+        self.assertEqual(len(data['misc']), 1)
 
     @unittest.mock.patch('resource.fetch_json')
     def test_load_empty_ruleset(self, mock_fetch_json):
