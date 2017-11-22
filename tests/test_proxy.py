@@ -38,6 +38,22 @@ class TestProxyServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             proxy.ProxyServer.parse_method(METHOD)
 
+    def test_parse_url(self):
+        URL = 'http://example.com/hello_world'
+        host, port, path = proxy.ProxyServer.parse_url(URL)
+
+        self.assertEqual(host, 'example.com')
+        self.assertEqual(port, 80)
+        self.assertEqual(path, '/hello_world')
+
+    def test_parse_url_with_query(self):
+        URL = 'http://example.com/hello_world?q=hello'
+        host, port, path = proxy.ProxyServer.parse_url(URL)
+
+        self.assertEqual(host, 'example.com')
+        self.assertEqual(port, 80)
+        self.assertEqual(path, '/hello_world?q=hello')
+
 
 class TestHTTPRequest(unittest.TestCase):
     def test_timed_out(self):
