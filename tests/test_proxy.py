@@ -105,16 +105,17 @@ class TestProxySessionOutput(unittest.TestCase):
         self.assertFalse(self.session.ready())
 
     def test_connection_made_method_connect(self):
-        self.mock_request.method.return_value = 'CONNECT'
+        self.mock_request.method = 'CONNECT'
         mock_transport = unittest.mock.MagicMock()
+
         self.session.connection_made(mock_transport)
 
-        self.assertFalse(self.mock_proxysession.writer.write.called)
-        self.assertTrue(mock_transport.write.called)
+        self.assertTrue(self.mock_proxysession.writer.write.called)
+        self.assertFalse(mock_transport.write.called)
         self.assertTrue(self.session.ready())
 
     def test_connection_made_method_get(self):
-        self.mock_request.method.return_value = 'GET'
+        self.mock_request.method = 'GET'
         transport = unittest.mock.MagicMock()
         self.session.connection_made(transport)
 
