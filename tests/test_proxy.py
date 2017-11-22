@@ -1,9 +1,15 @@
 import unittest
+import unittest.mock
 import time
 import proxy
 
 
 class TestProxyServer(unittest.TestCase):
+    @unittest.mock.patch('proxy.ProxyServer.start_periodic_refresh')
+    def test_init_starts_periodic_refresh(self, mock_start_refresh):
+        proxy_instance = proxy.ProxyServer(None)
+        self.assertTrue(mock_start_refresh.called)
+    
     def test_parse_method(self):
         METHOD = 'GET http://example.com/ HTTP/1.1'
         method, target, version = proxy.ProxyServer.parse_method(METHOD)

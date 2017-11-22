@@ -33,7 +33,7 @@ class ProxyServer():
         self.cachelist.load(config.cachelist)
 
         # Start periodic refresh
-        asyncio.ensure_future(self.start_periodic_refresh(config.list_refresh))
+        self.start_periodic_refresh(config.list_refresh)
   
         # create the acl object to handle incoming connections 
         logging.info("Initializing Access Control Lists (ACL's)")
@@ -187,26 +187,33 @@ class ProxyServer():
         parser = email.parser.Parser(_class=http.client.HTTPMessage)
         return parser.parsestr(hstring)
 
-    async def refresh_lists(self):
+    async def refresh_lists(self, interval):
         '''
         Refresh blacklist, whitelist, and cached resource lists.
         '''
-        try:
-            blacklist = resource.ResourceList()
-            blacklist.load(config.blacklist)
-            whitelist = resource.ResourceList()
-            whitelist.load(config.whitelist)
-            cachelist = resource.CacheList()
-            cachelist.load(config.cachelist)
+        while True:
+            # Sleep first because the lists are initialized automatically upon
+            # initializeation. So, we should sleep first.
+            await asyncio.sleep(interval)
 
-            self.blacklist = blacklist
-            self.whitelist = whitelist
-            self.cachelist = cachelist
+            try:
+                blacklist = resource.ResourceList()
+                blacklist.load(config.blacklist)
+                whitelist = resource.ResourceList()
+                whitelist.load(config.whitelist)
+                cachelist = resource.CacheList()
+                cachelist.load(config.cachelist)
 
-        except Exception as err:
-            logging.error('Error encountered while refreshing lists: %s' % err)
+                self.blacklist = blacklist
+                self.whitelist = whitelist
+                self.cachelist = cachelist
 
-    async def start_periodic_refresh(self, interval=12*3600):
+            except Exception as err:
+                logging.error('Error while refreshing lists: %s' % err)
+
+            
+
+    def start_periodic_refresh(self, interval=12*3600):
         '''
         Automatically refresh the blacklist, whitelist, and cached
         resource list every `interval` seconds. The default interval is
@@ -218,11 +225,8 @@ class ProxyServer():
         if interval < 0:
             return
 
-        while True:
-            # Sleep first because the lists are initialized automatically upon
-            # initializeation. So, we should sleep first.
-            await asyncio.sleep(interval)
-            await self.refresh_lists()
+        asyncio.ensure_future(self.refresh_lists(interval))
+            
 
 
 class HTTPRequest():
