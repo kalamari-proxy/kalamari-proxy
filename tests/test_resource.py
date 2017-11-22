@@ -1,5 +1,6 @@
 import unittest
 import unittest.mock
+import json
 
 import resource
 import config
@@ -7,6 +8,9 @@ import proxy
 
 
 class TestResource(unittest.TestCase):
+    def test_fetch_json(self):
+        raw_data = resource.fetch_json(config.whitelist)
+
     @unittest.mock.patch('resource.fetch_json')
     def test_load_empty_ruleset(self, mock_fetch_json):
         mock_fetch_json.return_value = {}
