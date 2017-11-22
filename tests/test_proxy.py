@@ -87,3 +87,44 @@ class TestHTTPRequest(unittest.TestCase):
 
         request.time = time.time() - 1000
         self.assertTrue(request.timed_out())
+
+
+class TestProxySessionOutput(unittest.TestCase):
+    def setUp(self):
+        self.mock_proxysession = unittest.mock.MagicMock()
+        self.mock_request = unittest.mock.MagicMock()
+        
+        self.session = proxy.ProxySessionOutput(self.mock_proxysession,
+                                                self.mock_request)
+
+    def test_ready_before_calling_connection_made(self):
+        '''
+        Test that ready() returns False before connection_made is
+        called.
+        '''
+        self.assertFalse(self.session.ready())
+
+    def test_connection_made_method_connect(self):
+        self.mock_request.method.return_value = 'CONNECT'
+        mock_transport = unittest.mock.MagicMock()
+        self.session.connection_made(mock_transport)
+
+        self.assertFalse(self.mock_proxysession.writer.write.called)
+        self.assertTrue(mock_transport.write.called)
+        self.assertTrue(self.session.ready())
+
+    def test_connection_made_method_get(self):
+        self.mock_request.method.return_value = 'GET'
+        transport = unittest.mock.MagicMock()
+        self.session.connection_made(transport)
+
+        self.assertFalse(self.mock_proxysession.writer.write.called)
+        self.assertTrue(self.session.ready())
+
+    def test_data_received_passes_data_to_proxysession(self):
+        self.session.data_received(b'data')
+        self.assertTrue(self.mock_proxysession.writer.write.called)
+
+    def test_connection_lost_closes_proxysession_writer(self):
+        self.session.connection_lost(None)
+        self.assertTrue(self.mock_proxysession.writer.close.called)
