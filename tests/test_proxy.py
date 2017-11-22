@@ -13,7 +13,7 @@ class TestProxyServer(unittest.TestCase):
 
     @unittest.mock.patch('proxy.ProxyServer.start_periodic_refresh')
     def test_init_starts_periodic_refresh(self, mock_start_refresh):
-        proxy_instance = proxy.ProxyServer(None)
+        proxy.ProxyServer(self.loop)
         self.assertTrue(mock_start_refresh.called)
     
     def test_parse_method(self):
@@ -75,6 +75,9 @@ class TestProxyServer(unittest.TestCase):
             self.assertEqual(len(headers), 2)
 
         self.loop.run_until_complete(run_async_test())
+
+    def test_start_periodic_refresh_with_negative_interval(self):
+        self.assertIsNone(proxy.ProxyServer.start_periodic_refresh(None, -1))
 
 
 class TestHTTPRequest(unittest.TestCase):
