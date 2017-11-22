@@ -1,10 +1,16 @@
 import unittest
 import unittest.mock
+
+import asyncio
 import time
 import proxy
 
 
 class TestProxyServer(unittest.TestCase):
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(None)
+
     @unittest.mock.patch('proxy.ProxyServer.start_periodic_refresh')
     def test_init_starts_periodic_refresh(self, mock_start_refresh):
         proxy_instance = proxy.ProxyServer(None)
@@ -53,6 +59,22 @@ class TestProxyServer(unittest.TestCase):
         self.assertEqual(host, 'example.com')
         self.assertEqual(port, 80)
         self.assertEqual(path, '/hello_world?q=hello')
+
+    def test_parse_headers(self):
+        class MockReader():
+            def __init__(self):
+                self.lines = [b'Host: example.com\n', b'Test: value\n', b'\n']
+
+            async def readline(self):
+                return self.lines.pop(0)
+
+        async def run_async_test():
+            headers = await proxy.ProxyServer.parse_headers(MockReader())
+            self.assertEqual(headers['host'], 'example.com')
+            self.assertEqual(headers['test'], 'value')
+            self.assertEqual(len(headers), 2)
+
+        self.loop.run_until_complete(run_async_test())
 
 
 class TestHTTPRequest(unittest.TestCase):
