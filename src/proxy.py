@@ -191,6 +191,8 @@ class ProxyServer():
         '''
         Refresh blacklist, whitelist, and cached resource lists.
         '''
+        logging.debug('Refreshing lists')
+
         while True:
             # Sleep first because the lists are initialized automatically upon
             # initializeation. So, we should sleep first.
@@ -222,6 +224,8 @@ class ProxyServer():
         The refresh functionality can be disabled by setting the
         the refresh interval to a negative number.
         '''
+        logging.debug('Starting periodic list refresh')
+        
         if interval < 0:
             return
 
