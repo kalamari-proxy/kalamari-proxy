@@ -18,8 +18,8 @@ class TestProxyServer(unittest.TestCase):
         self.assertEqual(target, 'http://example.com/')
         self.assertEqual(version, 'HTTP/1.1')
 
-    def test_parse_method_verb_only(self):
-        METHOD = 'GET'
+    def test_parse_method_missing_verb(self):
+        METHOD = ''
         with self.assertRaises(ValueError):
             proxy.ProxyServer.parse_method(METHOD)
 
