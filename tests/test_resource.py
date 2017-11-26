@@ -75,6 +75,21 @@ class TestResource(unittest.TestCase):
         self.assertFalse(rl.check(request))
 
     @unittest.mock.patch('resource.fetch_json')
+    def test_check_domain_parent(self, mock_fetch_json):
+        '''
+        Test that ResourceList.check() matches when a subdomain of a listed
+        domain is provided.
+        '''
+        DOMAINS = ['example.com']
+        mock_fetch_json.return_value = {'domain': DOMAINS}
+
+        rl = resource.ResourceList()
+        rl.load(config.blacklist)
+
+        request = proxy.HTTPRequest('GET', 'test.example.com', 80, '/', {}, 1)
+        self.assertTrue(rl.check(request))
+
+    @unittest.mock.patch('resource.fetch_json')
     def test_check_path(self, mock_fetch_json):
         PATHS = ['.*/ads/.*']
         mock_fetch_json.return_value = {'path': PATHS}
