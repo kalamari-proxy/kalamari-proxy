@@ -34,8 +34,8 @@ class ProxyServer():
 
         # Start periodic refresh
         self.start_periodic_refresh(config.list_refresh)
-  
-        # create the acl object to handle incoming connections 
+
+        # create the acl object to handle incoming connections
         logging.info("Initializing Access Control Lists (ACL's)")
         self.acl = acl.ACL(config.ip_acl)
 
@@ -84,7 +84,7 @@ class ProxyServer():
             writer.write(b'HTTP/1.1 403 Forbidden\n\n')
             writer.close()
             return
-        
+
         # Check if the request is on the blacklist or whitelist
         if self.whitelist.check(request):
             logging.info('Request is on the whitelist')
@@ -191,12 +191,11 @@ class ProxyServer():
         '''
         Refresh blacklist, whitelist, and cached resource lists.
         '''
-        logging.debug('Refreshing lists')
-
         while True:
             # Sleep first because the lists are initialized automatically upon
             # initializeation. So, we should sleep first.
             await asyncio.sleep(interval)
+            logging.debug('Refreshing lists')
 
             try:
                 blacklist = resource.ResourceList()
@@ -213,7 +212,7 @@ class ProxyServer():
             except Exception as err:
                 logging.error('Error while refreshing lists: %s' % err)
 
-            
+
 
     def start_periodic_refresh(self, interval=12*3600):
         '''
@@ -225,12 +224,12 @@ class ProxyServer():
         the refresh interval to a negative number.
         '''
         logging.debug('Starting periodic list refresh')
-        
+
         if interval < 0:
             return
 
         asyncio.ensure_future(self.refresh_lists(interval))
-            
+
 
 
 class HTTPRequest():
