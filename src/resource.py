@@ -48,8 +48,10 @@ class ResourceList():
         Indicate whether a request matches the blacklist.
         :param request HTTPRequest:
         '''
-        if request.host in self.domains:
-            return True
+        host_parts = request.host.split('.')
+        for i in range(len(host_parts)):
+            if '.'.join(host_parts[i:]) in self.domains:
+                return True
 
         if self.path_regex is not None:
             if self.path_regex.match(request.path):
