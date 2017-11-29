@@ -4,10 +4,10 @@ import http.client
 import email.parser
 from urllib.parse import urlparse
 import logging
-
 import config
 import resource
 import acl
+import ssl
 
 
 class ProxyServer():
@@ -34,8 +34,8 @@ class ProxyServer():
 
         # Start periodic refresh
         asyncio.ensure_future(self.start_periodic_refresh(config.list_refresh))
-  
-        # create the acl object to handle incoming connections 
+
+        # create the acl object to handle incoming connections
         logging.info("Initializing Access Control Lists (ACL's)")
         self.acl = acl.ACL(config.ip_acl)
 
@@ -279,9 +279,11 @@ class ProxySession():
         '''
         # Creates a socket and uses inherited methods from asyncio.Protocol as
         # callbacks for network events.
+
+
         self.output = ProxySessionOutput(self, self.request)
         coro = self.loop.create_connection(lambda: self.output,
-                                           self.request.host, self.request.port)
+                                           self.request.host, self.request.port,ssl=True)
         self.task = asyncio.async(coro)
 
     async def run(self):
