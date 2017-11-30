@@ -8,10 +8,12 @@ CAKEY=./ca.key
 # Functions #
 ############
 
+# logs name of script and error to console
 logmessage() {
     echo $SCRIPTNAME: $1
 }
 
+# prints usage for help text
 usage() {
     echo "Usage: $SCRIPTNAME -n session# -c common_name 
             [-s subject_alternative_name]
@@ -21,6 +23,7 @@ usage() {
 "
 }
 
+# create the CSR and key file for signing
 generateConfig() {
     echo "[ req ]
 default_bits       = 2048
@@ -31,20 +34,22 @@ countryName                 = US
 stateOrProvinceName         = Wisconsin
 localityName               = Madison
 organizationName           = Kalamari Proxy
-commonName                 = $COMMON_NAME" > $SESSION_NUMBER.csr
+commonName                 = $COMMON_NAME" > $SESSION_NUMBER.cfg
 #[ req_ext ]
 #subjectAltName = @alt_names
 #[alt_names]
 #DNS.1   = bestflare.com
 #DNS.2   = usefulread.com
-#DNS.3   = chandank.com" > $SESSION_NUMBER.csr
+#DNS.3   = chandank.com" > $SESSION_NUMBER.cfg
 
+    # Run openssl to create csr and private key for signing
 }
 
+# create certificate with existing key and csr
 signCertificate() {
-    # check to see if csr exists
-    if [ ! -r $SESSION_NUMBER.csr ]; then
-        logmessage "Cannot read $SESSION_NUMBER.csr"
+    # check to see if csr or key does not exist
+    if [ ! -r $SESSION_NUMBER.csr ] || [ ! -r $SESSION_NUMBER.key ]; then
+        logmessage "Cannot read $SESSION_NUMBER.csr and or $SESSION_NUMBER.key"
         exit 1
     fi
 }
