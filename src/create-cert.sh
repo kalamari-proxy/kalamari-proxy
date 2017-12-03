@@ -1,8 +1,9 @@
 #!/bin/bash
 
 SCRIPTNAME=`basename $0`
-CACRT=./ca.crt
-CAKEY=./ca.key
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CACRT="$DIR/ca.crt"
+CAKEY="$DIR/ca.key"
 
 #############
 # Functions #
