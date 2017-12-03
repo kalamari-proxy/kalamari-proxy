@@ -55,7 +55,7 @@ subjectAltName = @alt_names
         RETVAL=$?
         
         # cleanup config file
-        rm $COMMON_NAME.cfgh
+        rm $COMMON_NAME.cfg
     else 
         # generate CSR non-interactively without SAN's
         openssl req -nodes -new -newkey rsa:2048 -out $COMMON_NAME.csr -keyout $COMMON_NAME.key \
