@@ -94,13 +94,17 @@ if [ ! -r $CACRT ] || [ ! -r $CAKEY ]; then
 fi
 
 # process flags
-while getopts ":c:s:" opt; do
+while getopts ":c:s:h" opt; do
     case $opt in
         c)
             COMMON_NAME=$OPTARG
             ;;
         s)
             SUBJECT_ALTERNATIVE_NAMES=$OPTARG
+            ;;
+        h)
+            usage
+            exit 0
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
