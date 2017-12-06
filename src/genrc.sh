@@ -1,51 +1,6 @@
 #!/bin/bash
- 
-#Required
-domain=kalamari-proxy.github.io
-commonname=$domain
- 
-#Change to your company details
-country=US
-state=Wisconsin
-locality=Dane
-organization=Kalamari-Proxy
-organizationalunit=Mantis_Shrimp
-email=sahowell@wisc.edu
- 
-#Optional
-password=dummypassword
- 
-if [ -z "$domain" ]
-then
-    echo "Argument not present."
-    echo "Useage $0 [common name]"
- 
-    exit 99
-fi
- 
-echo "Generating key request for $domain"
- 
-#Generate a key
-openssl genrsa -des3 -passout pass:$password -out $domain.key 2048 -noout
- 
-#Remove passphrase from the key. Comment the line out to keep the passphrase
-echo "Removing passphrase from key"
-openssl rsa -in $domain.key -passin pass:$password -out $domain.key
- 
-#Create the request
-echo "Creating CSR"
-openssl req -new -key $domain.key -out $domain.csr -passin pass:$password \
-    -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
- 
-echo "---------------------------"
-echo "-----Below is your CSR-----"
-echo "---------------------------"
-echo
-cat $domain.csr
- 
-echo
-echo "---------------------------"
-echo "-----Below is your Key-----"
-echo "---------------------------"
-echo
-cat $domain.key
+
+echo Generating root certificate...
+openssl req -nodes -newkey rsa:2048 -keyout ca.key -out ca.csr -days 5500 -subj "/C=US/ST=Wisconsin/L=Madison/O=Kalamari Proxy/OU=Kalamari Proxy/CN=Kalamari Proxy Root Certificate Authority X1" > /dev/null 2>&1
+openssl x509 -req -days 365 -in ca.csr -signkey ca.key -out ca.crt > /dev/null 2>&1
+rm ca.csr > /dev/null 2>&1
