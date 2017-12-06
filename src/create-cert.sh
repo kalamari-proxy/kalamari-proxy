@@ -79,8 +79,11 @@ signCertificate() {
         exit 1
     fi
 
-    # sign csr - TODO: Doesn't work yet, no CA being generated
-    openssl x509 -req -in $COMMON_NAME.csr -CA $CACRT -CAkey $CAKEY -CAcreateserial -out $COMMON_NAME.crt -days 365 -sha256
+    # sign csr 
+    openssl x509 -req -in $COMMON_NAME.csr -CA $CACRT -CAkey $CAKEY -CAcreateserial -out $COMMON_NAME.crt -days 365 -sha256 > /dev/null 2>&1
+
+    # clean up csr
+    rm $COMMON_NAME.csr
 }
 
 ########
