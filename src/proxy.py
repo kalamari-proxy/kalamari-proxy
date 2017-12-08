@@ -133,6 +133,7 @@ class ProxyServer():
 
         # check for HTTP request target (aka URL)
         if len(split) < 2:
+            print('METHOD:', method)
             raise ValueError('missing request target')
         else:
             target = split[1]
@@ -340,10 +341,19 @@ class ProxySessionOutput(asyncio.Protocol):
             self.proxysession.writer.write(b'HTTP/1.1 200 OK\n\n')
             return
 
-        self.transport.write('GET {path} HTTP/1.1\nHost: {host}\nConnection: close\n\n'.format(**{
+        self.transport.write('{method} {path} HTTP/1.0\r\nHost: {host}\r\nConnection: close\r\n'.format(**{
+            'method': self.request.method,
             'host': self.request.host,
             'path': self.request.path
         }).encode('iso-8859-1'))
+        for header, value in self.request.headers.items():
+            if header.lower() in ('connection', 'host'):
+                continue
+            self.transport.write('{header}: {value}\r\n'.format(**{
+                'header': header,
+                'value': value
+            }).encode('iso-8859-1'))
+        self.transport.write(b'\r\n')
 
     def data_received(self, data):
         '''
