@@ -133,7 +133,7 @@ class ProxyServer():
 
         # check for HTTP request target (aka URL)
         if len(split) < 2:
-            print('METHOD:', method)
+            logging.debug('Parsing method: %s' % method)
             raise ValueError('missing request target')
         else:
             target = split[1]
