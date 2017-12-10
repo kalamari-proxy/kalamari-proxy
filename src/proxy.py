@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import logging
 import select
 import ssl
+import subprocess
 
 import config
 import resource
@@ -95,14 +96,23 @@ class ProxyServer():
         if request.method == 'CONNECT':
             print('Handling TLS request')
             writer.write(b'HTTP/1.1 200 OK\r\n\r\n')
+
+            self.gen_cert(request.host)
+
+            ssl_context = ssl.SSLContext()
+            ssl_context.load_cert_chain('%s.crt' % request.host, '%s.key' % request.host)
+
             sock = writer.get_extra_info('socket')
-            wrapped = self.ssl_context.wrap_socket(
+            wrapped = ssl_context.wrap_socket(
                 sock=sock,
                 server_side=True,
                 do_handshake_on_connect=False
             )
             await self.run_handshake(wrapped)
-            self.loop.create_task(self.loop.create_connection(ProxySessionTLS, sock=wrapped))
+            #self.loop.create_task(self.loop.create_connection(ProxySessionTLS, sock=wrapped))
+            reader, writer = await asyncio.open_connection(sock=wrapped, loop=self.loop)
+            proxysession = ProxySessionTLS(self.loop, self, reader, writer, request.host)
+            self.loop.create_task(proxysession.handle_request())
         else:
             proxysession = ProxySession(self.loop, reader, writer, request)
             proxysession.connect()
@@ -124,6 +134,10 @@ class ProxyServer():
             except ssl.SSLWantWriteError:
                 print('handshake needs write')
                 select.select([], [sock], [])
+
+    def gen_cert(self, hostname):
+        sans = '*.{host},*.*.{host},*.*.*.{host},*.*.*.*.{host},*.*.*.*.*.{host}'
+        subprocess.call(['./create-cert.sh', '-c', hostname, '-s', sans])
 
     def check_if_ip_allowed(self, ip):
         '''
@@ -273,7 +287,6 @@ class ProxyServer():
         asyncio.ensure_future(self.refresh_lists(interval))
 
 
-
 class HTTPRequest():
     '''
     Class to store information about a request.
@@ -306,6 +319,57 @@ class HTTPRequest():
             self.host,
             self.port,
             self.path)
+
+
+class ProxySessionTLS():
+    def __init__(self, loop, proxy, reader, writer, hostname):
+        self.loop = loop
+        self.proxy = proxy
+        self.reader = reader
+        self.writer = writer
+        self.hostname = hostname
+
+    async def handle_request(self):
+        method_line = (await self.reader.readline()).decode('utf8')
+        headers = await ProxyServer.parse_headers(self.reader)
+
+        # Parse method line
+        print('METHOD:', method_line)
+        method, target, version = ProxyServer.parse_method(method_line)
+        if method == 'CONNECT':
+            hostname, port = target.split(':')
+            print('HOSTNAME CONNECT: ', hostname)
+            request = HTTPRequest(method, hostname, port, '', headers,
+                                  self.proxy.get_next_session_id())
+        else:
+            print('HOSTNAME OTHER: ', self.hostname)
+            # Set port to 0 because it doesn't matter anymore
+            request = HTTPRequest(method, self.hostname, None, target, headers,
+                                  self.proxy.get_next_session_id())
+
+        logging.info('HTTP REQUEST ' + str(request))
+
+        # Check if the request is on the blacklist or whitelist
+        if self.proxy.whitelist.check(request):
+            logging.info('Request is on the whitelist (Session %i)' % request.session_id)
+        elif self.proxy.blacklist.check(request):
+            logging.info('Request is on the blacklist (Session %i)' % request.session_id)
+            self.writer.write(b'HTTP/1.1 404 Not Found\n\n')
+            self.writer.close()
+            return
+
+        # Check if the request is on the cached resources list
+        redirect = self.proxy.cachelist.check(request)
+        if redirect:
+            logging.info('Request is on the cached resource list (Session %i)' % request.session_id)
+            hostname, port, path = ProxyServer.parse_url(redirect)
+            request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
+            logging.info('Redirecting request to: %s' % request)
+
+
+        proxysession = ProxySession(self.loop, self.reader, self.writer, request)
+        proxysession.connect()
+        self.loop.create_task(proxysession.run())
 
 
 class ProxySession():
@@ -343,20 +407,6 @@ class ProxySession():
         while not self.reader.at_eof():
             data = await self.reader.read(8192)
             self.output.transport.write(data)
-
-
-class ProxySessionTLS(asyncio.Protocol):
-    def connection_made(self, transport):
-        self.transport = transport
-        print('-----TLS CONNECTION MADE')
-
-    def data_received(self, data):
-        print('-----TLS DATA RECEIVED')
-        print(data)
-        self.transport.write(b'HTTP/1.1 200 OK\r\n\r\nhello world')
-
-    def connection_lost(self, exc):
-        print('-----TLS CONNECTION LOST')
 
 
 class ProxySessionOutput(asyncio.Protocol):
