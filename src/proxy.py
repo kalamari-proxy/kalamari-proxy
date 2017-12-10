@@ -126,7 +126,7 @@ class ProxyServer():
         split = method.split(' ')
 
         # check for HTTP verb (GET, POST, etc.)
-        if len(split) < 1:
+        if len(split) == 1 and split[0] == '':
             raise ValueError('Missing HTTP verb')
         else:
             verb = split[0]
