@@ -4,6 +4,7 @@ import http.client
 import email.parser
 from urllib.parse import urlparse
 import logging
+import ssl
 
 import config
 import resource
@@ -39,10 +40,21 @@ class ProxyServer():
         logging.info("Initializing Access Control Lists (ACL's)")
         self.acl = acl.ACL(config.ip_acl)
 
+        # Create SSL Context
+        #self.ssl_context = ssl.SSLContext()
+        #self.ssl_context.load_cert_chain('ca.crt', 'ca.key')
+
     async def handler(self, reader, writer):
         '''
         Handler for incoming proxy requests.
         '''
+        # Check if request origin is allowed by the ACL
+        allowed = self.check_if_ip_allowed(writer.get_extra_info('peername')[0])
+        if not allowed:
+            writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+            writer.close()
+            return
+
         # Read the request method and headers
         method_line = (await reader.readline()).decode('utf8')
         headers = await self.parse_headers(reader)
@@ -51,39 +63,18 @@ class ProxyServer():
         method, target, version = ProxyServer.parse_method(method_line)
         if method == 'CONNECT':
             hostname, port = target.split(':')
+            wrapped = self.ssl_context.wrap_socket(
+                sock=writer.get_extra_info()['socket'],
+                server_side=True,
+                server_hostname=hostname
+            )
+            # wrapped = self.ssl_context.wrap_bio(reader, writer, server_side=True, server_hostname=hostname)
             request = HTTPRequest(method, hostname, port, '', headers, self.next_sess_id)
         else:
             hostname, port, path = ProxyServer.parse_url(target)
             request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
 
         logging.info('HTTP REQUEST ' + str(request))
-
-        # this is where we should reject requests that come from unauthorized ip's
-        try:
-            ip_address = writer.get_extra_info('peername')[0]
-
-            if ip_address is None:
-                logging.info('Could not get remote IP address')
-                writer.write(b'HTTP/1.1 403 Forbidden\n\n')
-                writer.close()
-                return
-
-            else:
-                if not self.acl.ip_allowed(ip_address):
-                    logging.info('Request from {} comes from disallowed network per ACL\'s, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
-                    writer.write(b'HTTP/1.1 403 Forbidden\n\n')
-                    writer.close()
-                    return
-
-                else:
-                    logging.info('Request from {} comes from allowed network per ACL\'s, continuing to process request'.format(ip_address))
-
-        # case where invalid ip address source
-        except ValueError:
-            logging.error('Invalid Inbound IP Address: {}, returning \'HTTP/1.1 403 Forbidden\''.format(ip_address))
-            writer.write(b'HTTP/1.1 403 Forbidden\n\n')
-            writer.close()
-            return
 
         # Check if the request is on the blacklist or whitelist
         if self.whitelist.check(request):
@@ -109,6 +100,28 @@ class ProxyServer():
 
         # increment session id
         self.next_sess_id += 1
+
+    def check_if_ip_allowed(self, ip):
+        '''
+        Check if `ip` is allowed to make proxy requests based on the ACL.
+        '''
+        try:
+            if ip is None:
+                logging.info('Could not get remote IP address')
+                return False
+            else:
+                if not self.acl.ip_allowed(ip):
+                    logging.info('Request from {} comes from disallowed network per ACL\'s'.format(ip))
+                    return False
+                else:
+                    logging.info('Request from {} comes from allowed network per ACL\'s'.format(ip))
+                    return True
+
+        # case where invalid ip address source
+        except ValueError:
+            logging.error('Invalid Inbound IP Address: {}'.format(ip))
+            return
+
 
     @staticmethod
     def parse_method(method):
