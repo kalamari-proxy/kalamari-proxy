@@ -4,6 +4,7 @@ import http.client
 import email.parser
 from urllib.parse import urlparse
 import logging
+import select
 import ssl
 
 import config
@@ -41,8 +42,8 @@ class ProxyServer():
         self.acl = acl.ACL(config.ip_acl)
 
         # Create SSL Context
-        #self.ssl_context = ssl.SSLContext()
-        #self.ssl_context.load_cert_chain('ca.crt', 'ca.key')
+        self.ssl_context = ssl.SSLContext()
+        self.ssl_context.load_cert_chain('ca.crt', 'ca.key')
 
     async def handler(self, reader, writer):
         '''
@@ -51,24 +52,19 @@ class ProxyServer():
         # Check if request origin is allowed by the ACL
         allowed = self.check_if_ip_allowed(writer.get_extra_info('peername')[0])
         if not allowed:
-            writer.write(b'HTTP/1.1 403 Forbidden\n\n')
+            writer.write(b'HTTP/1.1 403 Forbidden\r\n\r\n')
             writer.close()
             return
 
         # Read the request method and headers
         method_line = (await reader.readline()).decode('utf8')
         headers = await self.parse_headers(reader)
+        print('got headers: %s' % headers)
 
         # Parse method line
         method, target, version = ProxyServer.parse_method(method_line)
         if method == 'CONNECT':
             hostname, port = target.split(':')
-            #wrapped = self.ssl_context.wrap_socket(
-            #    sock=writer.get_extra_info()['socket'],
-            #    server_side=True,
-            #    server_hostname=hostname
-            #)
-            # wrapped = self.ssl_context.wrap_bio(reader, writer, server_side=True, server_hostname=hostname)
             request = HTTPRequest(method, hostname, port, '', headers,
                                   self.get_next_session_id())
         else:
@@ -96,9 +92,38 @@ class ProxyServer():
             logging.info('Redirecting request to: %s' % request)
 
         # Create a ProxySession instance to handle the request
-        proxysession = ProxySession(self.loop, reader, writer, request)
-        proxysession.connect()
-        self.loop.create_task(proxysession.run())
+        if request.method == 'CONNECT':
+            print('Handling TLS request')
+            writer.write(b'HTTP/1.1 200 OK\r\n\r\n')
+            sock = writer.get_extra_info('socket')
+            wrapped = self.ssl_context.wrap_socket(
+                sock=sock,
+                server_side=True,
+                do_handshake_on_connect=False
+            )
+            await self.run_handshake(wrapped)
+            self.loop.create_task(self.loop.create_connection(ProxySessionTLS, sock=wrapped))
+        else:
+            proxysession = ProxySession(self.loop, reader, writer, request)
+            proxysession.connect()
+            self.loop.create_task(proxysession.run())
+
+    async def run_handshake(self, sock):
+        '''
+        Coppied from the Python documentation:
+        https://docs.python.org/3/library/ssl.html#notes-on-non-blocking-sockets
+        '''
+        while True:
+            try:
+                print('trying to handshake')
+                sock.do_handshake()
+                break
+            except ssl.SSLWantReadError:
+                print('handshake needs read')
+                select.select([sock], [], [])
+            except ssl.SSLWantWriteError:
+                print('handshake needs write')
+                select.select([], [sock], [])
 
     def check_if_ip_allowed(self, ip):
         '''
@@ -320,6 +345,20 @@ class ProxySession():
             self.output.transport.write(data)
 
 
+class ProxySessionTLS(asyncio.Protocol):
+    def connection_made(self, transport):
+        self.transport = transport
+        print('-----TLS CONNECTION MADE')
+
+    def data_received(self, data):
+        print('-----TLS DATA RECEIVED')
+        print(data)
+        self.transport.write(b'HTTP/1.1 200 OK\r\n\r\nhello world')
+
+    def connection_lost(self, exc):
+        print('-----TLS CONNECTION LOST')
+
+
 class ProxySessionOutput(asyncio.Protocol):
     '''
     Handle the outboud connection to the destination server.
@@ -354,7 +393,7 @@ class ProxySessionOutput(asyncio.Protocol):
         # Special handling for the CONNECT method.
         # Notify the client that the connection has been opened.
         if self.request.method == 'CONNECT':
-            self.proxysession.writer.write(b'HTTP/1.1 200 OK\n\n')
+            self.proxysession.writer.write(b'HTTP/1.1 200 OK\r\n\r\n')
             return
 
         self.transport.write('{method} {path} HTTP/1.0\r\nHost: {host}\r\nConnection: close\r\n'.format(**{

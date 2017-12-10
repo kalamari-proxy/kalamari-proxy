@@ -48,7 +48,7 @@ class TestConnectExternalWebsites(unittest.TestCase):
         r = requests.get('http://github.com/', proxies=proxies)
         self.assertEqual(r.history[0].status_code, 301)
         self.assertEqual(r.url, 'https://github.com/')
-        
+
     def test_blocked_resource(self):
         '''
         Test blocked resource response by requesting a resource that appears
@@ -56,7 +56,7 @@ class TestConnectExternalWebsites(unittest.TestCase):
         '''
         r = requests.get('http://freakshare.com/',proxies=proxies)
         self.assertEqual(r.status_code, 404)
-        
+
     def test_get_example_cached3(self):
         '''
         Test cached resource functionality by requesting
