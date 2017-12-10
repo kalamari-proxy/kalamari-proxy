@@ -12,10 +12,17 @@ class TestProxyServer(unittest.TestCase):
         asyncio.set_event_loop(None)
 
     @unittest.mock.patch('proxy.ProxyServer.start_periodic_refresh')
+    def test_get_next_session_id(self, mock_start_refresh):
+        proxyserver = proxy.ProxyServer(self.loop)
+        self.assertEqual(proxyserver.get_next_session_id(), 1)
+        self.assertEqual(proxyserver.get_next_session_id(), 2)
+        self.assertEqual(proxyserver.get_next_session_id(), 3)
+
+    @unittest.mock.patch('proxy.ProxyServer.start_periodic_refresh')
     def test_init_starts_periodic_refresh(self, mock_start_refresh):
         proxy.ProxyServer(self.loop)
         self.assertTrue(mock_start_refresh.called)
-    
+
     def test_parse_method(self):
         METHOD = 'GET http://example.com/ HTTP/1.1'
         method, target, version = proxy.ProxyServer.parse_method(METHOD)
@@ -93,7 +100,7 @@ class TestProxySessionOutput(unittest.TestCase):
     def setUp(self):
         self.mock_proxysession = unittest.mock.MagicMock()
         self.mock_request = unittest.mock.MagicMock()
-        
+
         self.session = proxy.ProxySessionOutput(self.mock_proxysession,
                                                 self.mock_request)
 
