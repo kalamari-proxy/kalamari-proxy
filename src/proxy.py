@@ -63,16 +63,18 @@ class ProxyServer():
         method, target, version = ProxyServer.parse_method(method_line)
         if method == 'CONNECT':
             hostname, port = target.split(':')
-            wrapped = self.ssl_context.wrap_socket(
-                sock=writer.get_extra_info()['socket'],
-                server_side=True,
-                server_hostname=hostname
-            )
+            #wrapped = self.ssl_context.wrap_socket(
+            #    sock=writer.get_extra_info()['socket'],
+            #    server_side=True,
+            #    server_hostname=hostname
+            #)
             # wrapped = self.ssl_context.wrap_bio(reader, writer, server_side=True, server_hostname=hostname)
-            request = HTTPRequest(method, hostname, port, '', headers, self.next_sess_id)
+            request = HTTPRequest(method, hostname, port, '', headers,
+                                  self.get_next_session_id())
         else:
             hostname, port, path = ProxyServer.parse_url(target)
-            request = HTTPRequest(method, hostname, port, path, headers, self.next_sess_id)
+            request = HTTPRequest(method, hostname, port, path, headers,
+                                  self.get_next_session_id())
 
         logging.info('HTTP REQUEST ' + str(request))
 
@@ -98,9 +100,6 @@ class ProxyServer():
         proxysession.connect()
         self.loop.create_task(proxysession.run())
 
-        # increment session id
-        self.next_sess_id += 1
-
     def check_if_ip_allowed(self, ip):
         '''
         Check if `ip` is allowed to make proxy requests based on the ACL.
@@ -122,6 +121,10 @@ class ProxyServer():
             logging.error('Invalid Inbound IP Address: {}'.format(ip))
             return
 
+    def get_next_session_id(self):
+        tmp = self.next_sess_id
+        self.next_sess_id += 1
+        return tmp
 
     @staticmethod
     def parse_method(method):
