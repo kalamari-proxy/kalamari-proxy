@@ -80,9 +80,9 @@ class ProxyServer():
 
         # Check if the request is on the blacklist or whitelist
         if self.whitelist.check(request):
-            logging.info('Request is on the whitelist')
+            logging.info('Request is on the whitelist (Session %i)' % request.session_id)
         elif self.blacklist.check(request):
-            logging.info('Request is on the blacklist')
+            logging.info('Request is on the blacklist (Session %i)' % request.session_id)
             writer.write(b'HTTP/1.1 404 Not Found\n\n')
             writer.close()
             return
@@ -90,7 +90,7 @@ class ProxyServer():
         # Check if the request is on the cached resources list
         redirect = self.cachelist.check(request)
         if redirect:
-            logging.info('Request is on the cached resource list.')
+            logging.info('Request is on the cached resource list (Session %i)' % request.session_id)
             hostname, port, path = ProxyServer.parse_url(redirect)
             request = HTTPRequest(method, hostname, port, path, headers, request.session_id)
             logging.info('Redirecting request to: %s' % request)
